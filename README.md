@@ -5,14 +5,17 @@ A Chrome extension that allows you to blur messages from specific WhatsApp conta
 ## Features
 
 - 🔒 Blur messages from specific contacts
+- 👥 **NEW: Multi-user management** - Manage blur settings for multiple users at once
+- 🔍 **NEW: Auto-scan users** - Automatically detect all users visible on WhatsApp Web
 - 🎛️ Granular control over what gets blurred:
   - Chat list name and message preview
   - Chat list avatar
   - Header name and avatar
   - Message text and images
-- 🎨 Beautiful, modern UI
+- 🎨 Beautiful, modern UI with tabbed interface
 - 💾 Settings are saved and persist across sessions
 - 🔄 Auto-reapplies blur when navigating WhatsApp Web
+- 🎯 Individual toggle controls for each user
 
 ## Installation
 
@@ -24,17 +27,27 @@ A Chrome extension that allows you to blur messages from specific WhatsApp conta
 
 ## Usage
 
+### Settings Tab (Original Functionality)
 1. **Open WhatsApp Web** in your browser
 2. **Click the extension icon** in your toolbar
 3. **Enter the contact name** you want to blur (exactly as it appears in WhatsApp)
 4. **Configure blur settings** by checking/unchecking the options
 5. **Click "Apply Blur"** to start blurring
 
+### Manage Users Tab (NEW)
+1. **Click the "Manage Users" tab** in the extension popup
+2. **Click "Scan for Users"** to automatically detect all users currently visible on WhatsApp Web
+3. **Toggle blur on/off** for individual users using the toggle switches
+4. **Remove users** from the list using the × button
+5. **Clear all users** using the "Clear All Users" button
+
 ### Quick Actions
 
-- **Apply Blur**: Applies blur with current settings
-- **Toggle Blur**: Enable/disable blur without changing settings
-- **Clear All**: Remove all blur effects
+- **Apply Blur**: Applies blur with current settings (Settings tab)
+- **Toggle Blur**: Enable/disable blur without changing settings (Settings tab)
+- **Clear All**: Remove all blur effects (Settings tab)
+- **Scan for Users**: Automatically detect users (Manage Users tab)
+- **Clear All Users**: Remove all users from management list (Manage Users tab)
 
 ### Context Menu
 

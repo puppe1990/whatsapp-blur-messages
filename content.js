@@ -4,6 +4,7 @@ let currentSettings = null;
 let blurObserver = null;
 let lastBlurredElements = new Set();
 let currentChatContext = null;
+let managedUsers = new Map(); // Store multiple user blur settings
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -22,6 +23,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             
         case 'clearBlur':
             clearBlur();
+            sendResponse({success: true});
+            break;
+            
+        case 'scanUsers':
+            const users = scanForUsers();
+            sendResponse({success: true, users: users});
+            break;
+            
+        case 'toggleUserBlur':
+            toggleUserBlur(request.userName, request.isBlurred);
+            sendResponse({success: true});
+            break;
+            
+        case 'removeUserBlur':
+            removeUserBlur(request.userName);
+            sendResponse({success: true});
+            break;
+            
+        case 'clearAllUsers':
+            clearAllUsers();
             sendResponse({success: true});
             break;
             
@@ -107,7 +128,300 @@ function isInTargetChat(contactName) {
     return false;
 }
 
-// Main blur function
+
+// Debounced blur function to prevent excessive calls
+let blurTimeout;
+function debouncedBlur() {
+    if (!currentSettings) return;
+    
+    clearTimeout(blurTimeout);
+    blurTimeout = setTimeout(() => {
+        blurContact(currentSettings.contactName, currentSettings.blurSettings);
+    }, 200);
+}
+
+// Setup mutation observer
+function setupBlurObserver() {
+    if (blurObserver) {
+        blurObserver.disconnect();
+    }
+    
+    blurObserver = new MutationObserver((mutations) => {
+        const hasSignificantChanges = mutations.some(mutation => {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                for (let node of mutation.addedNodes) {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Check if any managed users' content was added
+                        for (let [userName, userData] of managedUsers) {
+                            if (userData.isBlurred && node.textContent && node.textContent.includes(userName)) {
+                                return true;
+                            }
+                        }
+                        
+                        // Check for images
+                        const hasImages = node.querySelector && node.querySelector('img');
+                        if (hasImages) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        });
+        
+        if (hasSignificantChanges) {
+            // Re-apply blur for all managed users
+            for (let [userName, userData] of managedUsers) {
+                if (userData.isBlurred) {
+                    blurContact(userName, userData.blurSettings);
+                }
+            }
+        }
+    });
+    
+    blurObserver.observe(document.body, { 
+        childList: true, 
+        subtree: true,
+        attributes: false,
+        characterData: false
+    });
+}
+
+function applyBlur(contactName, blurSettings) {
+    if (!contactName) {
+        console.error('No contact name provided');
+        return;
+    }
+    
+    currentSettings = { contactName, blurSettings };
+    managedUsers.set(contactName, {
+        name: contactName,
+        isBlurred: true,
+        blurSettings: blurSettings
+    });
+    
+    setupBlurObserver();
+    blurContact(contactName, blurSettings);
+    isBlurEnabled = true;
+    
+    console.log('Blur applied for:', contactName);
+}
+
+function toggleBlur() {
+    const style = document.getElementById('wa-blur-style');
+    if (style) {
+        style.remove();
+        clearAllBlurClasses();
+        lastBlurredElements.clear();
+        currentChatContext = null;
+        isBlurEnabled = false;
+        console.log('Blur disabled');
+    } else {
+        if (currentSettings) {
+            addBlurStyles();
+            blurContact(currentSettings.contactName, currentSettings.blurSettings);
+            isBlurEnabled = true;
+            console.log('Blur enabled');
+        } else {
+            console.error('No blur settings available');
+        }
+    }
+}
+
+function clearBlur() {
+    clearAllBlurClasses();
+    lastBlurredElements.clear();
+    currentChatContext = null;
+    isBlurEnabled = false;
+    currentSettings = null;
+    
+    if (blurObserver) {
+        blurObserver.disconnect();
+        blurObserver = null;
+    }
+    
+    console.log('Blur cleared');
+}
+
+// Auto-apply blur when page loads if settings exist
+chrome.storage.sync.get(['contactName', 'blurSettings', 'isEnabled', 'managedUsers'], function(result) {
+    // Load managed users
+    if (result.managedUsers && result.managedUsers.length > 0) {
+        result.managedUsers.forEach(user => {
+            if (user.isBlurred) {
+                managedUsers.set(user.name, user);
+            }
+        });
+        
+        // Apply blur for all managed users
+        setTimeout(() => {
+            for (let [userName, userData] of managedUsers) {
+                if (userData.isBlurred) {
+                    blurContact(userName, userData.blurSettings);
+                }
+            }
+            setupBlurObserver();
+        }, 2000);
+    }
+    
+    // Legacy support for single user
+    if (result.isEnabled && result.contactName && result.blurSettings) {
+        setTimeout(() => {
+            applyBlur(result.contactName, result.blurSettings);
+        }, 2000);
+    }
+});
+
+// Scan for users currently visible on the page
+function scanForUsers() {
+    const users = [];
+    const seenNames = new Set();
+    
+    // Look for user names in chat list
+    const chatSpans = document.querySelectorAll("span[title]");
+    chatSpans.forEach(span => {
+        const title = span.getAttribute('title');
+        if (title && title.trim() && !seenNames.has(title.trim())) {
+            // Check if this looks like a contact name (not a message preview)
+            const parent = span.closest('div[role="listitem"]') || span.closest('div[tabindex]');
+            if (parent) {
+                // Check if this span is likely a name (not a message)
+                const textContent = span.textContent.trim();
+                if (textContent === title && textContent.length > 0 && textContent.length < 50) {
+                    users.push({
+                        name: title.trim(),
+                        isBlurred: false
+                    });
+                    seenNames.add(title.trim());
+                }
+            }
+        }
+    });
+    
+    // Also look for names in the current chat header
+    const header = document.querySelector('header');
+    if (header) {
+        const headerElements = header.querySelectorAll('*');
+        headerElements.forEach(el => {
+            const text = el.textContent && el.textContent.trim();
+            if (text && text.length > 0 && text.length < 50 && !seenNames.has(text)) {
+                // Check if this looks like a contact name
+                if (!text.includes(' ') || text.split(' ').length <= 3) {
+                    users.push({
+                        name: text,
+                        isBlurred: false
+                    });
+                    seenNames.add(text);
+                }
+            }
+        });
+    }
+    
+    console.log('Scanned users:', users);
+    return users;
+}
+
+// Toggle blur for a specific user
+function toggleUserBlur(userName, isBlurred) {
+    if (isBlurred) {
+        managedUsers.set(userName, {
+            name: userName,
+            isBlurred: true,
+            blurSettings: {
+                chatListName: true,
+                chatListMessage: true,
+                chatListAvatar: true,
+                headerName: true,
+                headerAvatar: true,
+                messageText: true,
+                messageImages: true
+            }
+        });
+        blurContact(userName, managedUsers.get(userName).blurSettings);
+    } else {
+        managedUsers.delete(userName);
+        removeUserBlur(userName);
+    }
+    
+    console.log('Toggled blur for user:', userName, 'isBlurred:', isBlurred);
+}
+
+// Remove blur for a specific user
+function removeUserBlur(userName) {
+    // Remove blur classes for this specific user
+    const chatSpans = document.querySelectorAll("span[title]");
+    chatSpans.forEach(span => {
+        if (span.getAttribute('title') === userName) {
+            span.classList.remove('wa-blur-target');
+            
+            // Also remove blur from associated elements
+            const container = span.closest('div[role="listitem"]') || span.closest('div[tabindex]');
+            if (container) {
+                const img = container.querySelector('img');
+                if (img) {
+                    img.classList.remove('wa-blur-image');
+                }
+                
+                // Remove blur from message preview
+                const allSpans = document.querySelectorAll("span[title]");
+                const currentIndex = Array.from(allSpans).indexOf(span);
+                if (currentIndex + 1 < allSpans.length) {
+                    const nextSpan = allSpans[currentIndex + 1];
+                    if (nextSpan) {
+                        nextSpan.classList.remove('wa-blur-target');
+                    }
+                }
+            }
+        }
+    });
+    
+    // Remove blur from header if we're in this user's chat
+    if (isInTargetChat(userName)) {
+        const header = document.querySelector('header');
+        if (header) {
+            const allElements = header.querySelectorAll('*');
+            allElements.forEach(el => {
+                if (el.textContent && el.textContent.trim() === userName) {
+                    el.classList.remove('wa-blur-target');
+                }
+            });
+            
+            const headerImgs = header.querySelectorAll('img');
+            headerImgs.forEach(img => img.classList.remove('wa-blur-image'));
+        }
+        
+        // Remove blur from messages
+        const messageArea = document.querySelector('[data-testid="conversation-panel-messages"]') ||
+                           document.querySelector('.message-list') ||
+                           document.querySelector('[role="log"]');
+        
+        if (messageArea) {
+            const allElements = messageArea.querySelectorAll('*');
+            allElements.forEach(el => {
+                if (el.textContent && el.textContent.trim().length > 3) {
+                    el.classList.remove('wa-blur-target');
+                }
+            });
+            
+            const imgs = messageArea.querySelectorAll('img');
+            imgs.forEach(img => img.classList.remove('wa-blur-image'));
+        }
+    }
+    
+    console.log('Removed blur for user:', userName);
+}
+
+// Clear all users
+function clearAllUsers() {
+    managedUsers.clear();
+    clearAllBlurClasses();
+    lastBlurredElements.clear();
+    currentChatContext = null;
+    
+    console.log('Cleared all users');
+}
+
+// Enhanced blur function that works with multiple users
 function blurContact(contactName, blurSettings) {
     if (!contactName || !blurSettings) {
         return;
@@ -251,113 +565,5 @@ function blurContact(contactName, blurSettings) {
         }
     }
 }
-
-// Debounced blur function to prevent excessive calls
-let blurTimeout;
-function debouncedBlur() {
-    if (!currentSettings) return;
-    
-    clearTimeout(blurTimeout);
-    blurTimeout = setTimeout(() => {
-        blurContact(currentSettings.contactName, currentSettings.blurSettings);
-    }, 200);
-}
-
-// Setup mutation observer
-function setupBlurObserver() {
-    if (blurObserver) {
-        blurObserver.disconnect();
-    }
-    
-    blurObserver = new MutationObserver((mutations) => {
-        if (!currentSettings) return;
-        
-        const hasSignificantChanges = mutations.some(mutation => {
-            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                for (let node of mutation.addedNodes) {
-                    if (node.nodeType === Node.ELEMENT_NODE) {
-                        const hasTargetContent = node.textContent && node.textContent.includes(currentSettings.contactName);
-                        const hasImages = node.querySelector && node.querySelector('img');
-                        if (hasTargetContent || hasImages) {
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        });
-        
-        if (hasSignificantChanges) {
-            debouncedBlur();
-        }
-    });
-    
-    blurObserver.observe(document.body, { 
-        childList: true, 
-        subtree: true,
-        attributes: false,
-        characterData: false
-    });
-}
-
-function applyBlur(contactName, blurSettings) {
-    if (!contactName) {
-        console.error('No contact name provided');
-        return;
-    }
-    
-    currentSettings = { contactName, blurSettings };
-    setupBlurObserver();
-    blurContact(contactName, blurSettings);
-    isBlurEnabled = true;
-    
-    console.log('Blur applied for:', contactName);
-}
-
-function toggleBlur() {
-    const style = document.getElementById('wa-blur-style');
-    if (style) {
-        style.remove();
-        clearAllBlurClasses();
-        lastBlurredElements.clear();
-        currentChatContext = null;
-        isBlurEnabled = false;
-        console.log('Blur disabled');
-    } else {
-        if (currentSettings) {
-            addBlurStyles();
-            blurContact(currentSettings.contactName, currentSettings.blurSettings);
-            isBlurEnabled = true;
-            console.log('Blur enabled');
-        } else {
-            console.error('No blur settings available');
-        }
-    }
-}
-
-function clearBlur() {
-    clearAllBlurClasses();
-    lastBlurredElements.clear();
-    currentChatContext = null;
-    isBlurEnabled = false;
-    currentSettings = null;
-    
-    if (blurObserver) {
-        blurObserver.disconnect();
-        blurObserver = null;
-    }
-    
-    console.log('Blur cleared');
-}
-
-// Auto-apply blur when page loads if settings exist
-chrome.storage.sync.get(['contactName', 'blurSettings', 'isEnabled'], function(result) {
-    if (result.isEnabled && result.contactName && result.blurSettings) {
-        // Wait a bit for WhatsApp to load
-        setTimeout(() => {
-            applyBlur(result.contactName, result.blurSettings);
-        }, 2000);
-    }
-});
 
 console.log('WhatsApp Blur Content Script loaded');
