@@ -261,11 +261,49 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="user-status">${user.isBlurred ? 'Blurred' : 'Visible'}</div>
                 </div>
                 <div class="user-controls">
-                    <div class="user-toggle ${user.isBlurred ? 'active' : ''}" onclick="toggleUserBlur('${user.name}')"></div>
-                    <button class="user-remove" onclick="removeUser('${user.name}')" title="Remove user">×</button>
+                    <div class="user-toggle ${user.isBlurred ? 'active' : ''}" data-username="${user.name}"></div>
+                    <button class="user-remove" data-username="${user.name}" title="Remove user">×</button>
                 </div>
             </div>
         `).join('');
+        
+        // Add event listeners to the newly created elements
+        addUserEventListeners();
+    }
+    
+    // Add event listeners to user controls
+    function addUserEventListeners() {
+        // Toggle switches
+        const toggles = usersList.querySelectorAll('.user-toggle');
+        toggles.forEach(toggle => {
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const userName = this.getAttribute('data-username');
+                console.log('Toggle clicked for user:', userName);
+                
+                // Add visual feedback
+                this.style.opacity = '0.5';
+                setTimeout(() => {
+                    this.style.opacity = '1';
+                }, 200);
+                
+                toggleUserBlur(userName);
+            });
+        });
+        
+        // Remove buttons
+        const removeButtons = usersList.querySelectorAll('.user-remove');
+        removeButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const userName = this.getAttribute('data-username');
+                removeUser(userName);
+            });
+        });
     }
     
     // Scan for users on WhatsApp Web
@@ -327,13 +365,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Toggle blur for a specific user
-    window.toggleUserBlur = function(userName) {
+    function toggleUserBlur(userName) {
+        console.log('Toggle blur called for user:', userName);
+        
         chrome.storage.sync.get(['managedUsers'], function(result) {
             const users = result.managedUsers || [];
             const userIndex = users.findIndex(user => user.name === userName);
             
+            console.log('Found user at index:', userIndex, 'Current users:', users);
+            
             if (userIndex !== -1) {
                 users[userIndex].isBlurred = !users[userIndex].isBlurred;
+                console.log('Updated user blur status:', users[userIndex].isBlurred);
+                
                 saveUsersList(users);
                 displayUsersList(users);
                 
@@ -341,21 +385,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
                     const currentTab = tabs[0];
                     if (currentTab.url.includes('web.whatsapp.com')) {
-                        chrome.tabs.sendMessage(currentTab.id, {
+                        console.log('Sending message to content script:', {
                             action: 'toggleUserBlur',
                             userName: userName,
                             isBlurred: users[userIndex].isBlurred
                         });
+                        
+                        chrome.tabs.sendMessage(currentTab.id, {
+                            action: 'toggleUserBlur',
+                            userName: userName,
+                            isBlurred: users[userIndex].isBlurred
+                        }, function(response) {
+                            if (chrome.runtime.lastError) {
+                                console.error('Error sending message:', chrome.runtime.lastError);
+                                showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
+                            } else {
+                                console.log('Message sent successfully:', response);
+                            }
+                        });
+                    } else {
+                        showStatus('Please open WhatsApp Web first', 'error');
                     }
                 });
                 
                 showStatus(`${userName} ${users[userIndex].isBlurred ? 'blurred' : 'unblurred'}`, 'success');
+            } else {
+                console.error('User not found:', userName);
+                showStatus('User not found', 'error');
             }
         });
-    };
+    }
     
     // Remove a specific user
-    window.removeUser = function(userName) {
+    function removeUser(userName) {
         if (confirm(`Remove ${userName} from the list?`)) {
             chrome.storage.sync.get(['managedUsers'], function(result) {
                 const users = result.managedUsers || [];
@@ -377,5 +439,5 @@ document.addEventListener('DOMContentLoaded', function() {
                 showStatus(`${userName} removed`, 'success');
             });
         }
-    };
+    }
 });

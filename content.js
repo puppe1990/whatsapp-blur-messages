@@ -32,6 +32,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             break;
             
         case 'toggleUserBlur':
+            console.log('Content script received toggleUserBlur:', request);
             toggleUserBlur(request.userName, request.isBlurred);
             sendResponse({success: true});
             break;
@@ -323,7 +324,10 @@ function scanForUsers() {
 
 // Toggle blur for a specific user
 function toggleUserBlur(userName, isBlurred) {
+    console.log('toggleUserBlur called with:', userName, isBlurred);
+    
     if (isBlurred) {
+        console.log('Adding user to managed users:', userName);
         managedUsers.set(userName, {
             name: userName,
             isBlurred: true,
@@ -337,13 +341,22 @@ function toggleUserBlur(userName, isBlurred) {
                 messageImages: true
             }
         });
+        
+        // Ensure blur observer is set up
+        if (!blurObserver) {
+            setupBlurObserver();
+        }
+        
         blurContact(userName, managedUsers.get(userName).blurSettings);
+        console.log('Applied blur for user:', userName);
     } else {
+        console.log('Removing user from managed users:', userName);
         managedUsers.delete(userName);
         removeUserBlur(userName);
+        console.log('Removed blur for user:', userName);
     }
     
-    console.log('Toggled blur for user:', userName, 'isBlurred:', isBlurred);
+    console.log('Current managed users:', Array.from(managedUsers.keys()));
 }
 
 // Remove blur for a specific user
