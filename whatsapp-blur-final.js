@@ -1,5 +1,5 @@
 (function() {
-  const nameToBlur = "Larissa Rodrigues"; // Replace with the contact's name
+  const nameToBlur = "teste"; // Replace with the contact's name
   
   // Blur control flags
   const blurSettings = {
