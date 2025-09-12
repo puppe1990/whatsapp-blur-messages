@@ -474,46 +474,52 @@ function clearAllBlurClasses() {
 
 // Check if we're currently in the target chat
 function isInTargetChat(contactName) {
-    const header = document.querySelector('header');
-    if (!header) {
-        return false;
-    }
-    
-    // Method 1: Look for the contact name in the header
-    const allElements = header.querySelectorAll('*');
-    for (let el of allElements) {
-        if (el.textContent && el.textContent.trim() === contactName) {
-            return true;
+    if (!contactName) return false;
+
+    const normalize = s => (s || '')
+        .normalize('NFD')
+        .replace(/\p{Diacritic}+/gu, '')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '') // zero-width chars
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    const target = normalize(contactName);
+
+    // Candidate 1: Header area (primary source of truth)
+    const header = document.querySelector('[data-testid="conversation-header"], header');
+    if (header) {
+        // Prefer a strict title attribute match
+        const headerTitleSpans = header.querySelectorAll('span[title], div[title]');
+        for (let span of headerTitleSpans) {
+            const t = span.getAttribute('title');
+            if (t && normalize(t) === target) return true;
+        }
+        // Fallback to exact visible text in header (normalized)
+        const headerTextEls = header.querySelectorAll('h1, h2, span, div');
+        for (let el of headerTextEls) {
+            const text = normalize(el.textContent);
+            if (text && text === target) return true;
         }
     }
-    
-    // Method 2: Check if header has a title attribute with the name
-    const headerTitle = header.getAttribute('title');
-    if (headerTitle && headerTitle.includes(contactName)) {
-        return true;
-    }
-    
-    // Method 3: Look for any element with the name as text content
-    const allTextElements = document.querySelectorAll('*');
-    for (let el of allTextElements) {
-        if (el.textContent && el.textContent.trim() === contactName) {
-            const rect = el.getBoundingClientRect();
-            const headerRect = header.getBoundingClientRect();
-            if (rect.top >= headerRect.top && rect.bottom <= headerRect.bottom) {
-                return true;
-            }
+
+    // Candidate 2: Selected item in the chat list (left pane)
+    const selectedCandidates = [
+        '[aria-selected="true"]',
+        '[role="row"][aria-selected="true"]',
+        'div[aria-selected="true"]',
+        '[data-testid="cell-frame-container"][aria-selected="true"]'
+    ];
+    for (let sel of selectedCandidates) {
+        const selected = document.querySelector(sel);
+        if (selected) {
+            const titleEl = selected.querySelector('span[title]');
+            if (titleEl && normalize(titleEl.getAttribute('title')) === target) return true;
+            const textEl = selected.querySelector('h1, h2, span, div');
+            if (textEl && normalize(textEl.textContent) === target) return true;
         }
     }
-    
-    // Method 4: Check if we're in a conversation (not in chat list)
-    const messageArea = document.querySelector('[data-testid="conversation-panel-messages"]') ||
-                       document.querySelector('.message-list') ||
-                       document.querySelector('[role="log"]');
-    
-    if (messageArea) {
-        return true;
-    }
-    
+
+    // If no strong signal, consider not in target chat
     return false;
 }
 
@@ -1144,13 +1150,12 @@ function blurContact(contactName, blurSettings, blurTypeSettings = { type: 'stan
     // Add styles with the specified blur type
     addBlurStyles(blurTypeSettings);
     
-    // Check if we need to clear previous blur (only when context changes)
+    // Track chat context without clearing existing blur from other users
     const newChatContext = isInTargetChat(contactName);
     if (currentChatContext !== newChatContext) {
-        console.log(`🔄 Chat context changed, clearing previous blur classes`);
-        clearAllBlurClasses();
-        lastBlurredElements.clear();
+        console.log('🔄 Chat context changed (non-destructive):', { from: currentChatContext, to: newChatContext });
         currentChatContext = newChatContext;
+        // Do NOT clear global blur classes here — multiple users can be active.
     }
     
     let elementsBlurred = {
@@ -1643,4 +1648,3 @@ function startBlurMonitoring() {
 setTimeout(startBlurMonitoring, 2000);
 
 console.log('WhatsApp Blur Content Script loaded');
-
