@@ -853,6 +853,22 @@ function removeUserBlur(userName) {
     chatSpans.forEach(span => {
         if (span.getAttribute('title') === userName) {
             span.classList.remove('wa-blur-target');
+            // Clean inline styles applied by fallbacks
+            if (span.dataset && (span.dataset.waBlurInline || span.dataset.waElegant)) {
+                span.style.filter = '';
+                span.style.backdropFilter = '';
+                span.style.backgroundColor = '';
+                span.style.borderRadius = '';
+                span.style.transition = '';
+                delete span.dataset.waBlurInline;
+                delete span.dataset.waElegant;
+            }
+            // Also strip blur-related inline styles if present
+            if (span.style && (span.style.filter?.includes('blur') || span.style.backdropFilter?.includes('blur'))) {
+                span.style.filter = '';
+                span.style.backdropFilter = '';
+                span.style.backgroundColor = '';
+            }
             
             // Also remove blur from associated elements
             const container = span.closest('div[role="listitem"]') || span.closest('div[tabindex]');
@@ -860,6 +876,20 @@ function removeUserBlur(userName) {
                 const img = container.querySelector('img');
                 if (img) {
                     img.classList.remove('wa-blur-image');
+                    if (img.dataset && (img.dataset.waBlurInline || img.dataset.waElegant)) {
+                        img.style.filter = '';
+                        img.style.backdropFilter = '';
+                        img.style.backgroundColor = '';
+                        img.style.borderRadius = '';
+                        img.style.transition = '';
+                        delete img.dataset.waBlurInline;
+                        delete img.dataset.waElegant;
+                    }
+                    if (img.style && (img.style.filter?.includes('blur') || img.style.backdropFilter?.includes('blur'))) {
+                        img.style.filter = '';
+                        img.style.backdropFilter = '';
+                        img.style.backgroundColor = '';
+                    }
                 }
                 
                 // Remove blur from message preview
@@ -869,42 +899,132 @@ function removeUserBlur(userName) {
                     const nextSpan = allSpans[currentIndex + 1];
                     if (nextSpan) {
                         nextSpan.classList.remove('wa-blur-target');
+                        if (nextSpan.dataset && (nextSpan.dataset.waBlurInline || nextSpan.dataset.waElegant)) {
+                            nextSpan.style.filter = '';
+                            nextSpan.style.backdropFilter = '';
+                            nextSpan.style.backgroundColor = '';
+                            nextSpan.style.borderRadius = '';
+                            nextSpan.style.transition = '';
+                            delete nextSpan.dataset.waBlurInline;
+                            delete nextSpan.dataset.waElegant;
+                        }
+                        if (nextSpan.style && (nextSpan.style.filter?.includes('blur') || nextSpan.style.backdropFilter?.includes('blur'))) {
+                            nextSpan.style.filter = '';
+                            nextSpan.style.backdropFilter = '';
+                            nextSpan.style.backgroundColor = '';
+                        }
                     }
                 }
             }
         }
     });
     
-    // Remove blur from header if we're in this user's chat
+    // Decide if current open chat matches the user (robust detection)
+    const headerRoot = document.querySelector('[data-testid="conversation-header"], header');
+    const norm = s => (s || '').normalize('NFD').replace(/\p{Diacritic}+/gu, '').replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+    let inTarget = false;
     if (isInTargetChat(userName)) {
-        const header = document.querySelector('header');
-        if (header) {
-            const allElements = header.querySelectorAll('*');
-            allElements.forEach(el => {
-                if (el.textContent && el.textContent.trim() === userName) {
-                    el.classList.remove('wa-blur-target');
+        inTarget = true;
+    } else if (headerRoot) {
+        const target = norm(userName);
+        // Try to extract displayed chat name
+        const candidates = headerRoot.querySelectorAll('span[title], div[title], h1, h2, span, div');
+        for (let el of candidates) {
+            const ht = el.getAttribute && el.getAttribute('title');
+            const text = norm(ht || el.textContent);
+            if (text && (text === target || text.includes(target) || target.includes(text))) {
+                inTarget = true;
+                break;
+            }
+        }
+    }
+
+    if (inTarget) {
+        // Clean header
+        if (headerRoot) {
+            const headerTargets = headerRoot.querySelectorAll('.wa-blur-target');
+            headerTargets.forEach(el => {
+                el.classList.remove('wa-blur-target');
+                if (el.dataset && (el.dataset.waBlurInline || el.dataset.waElegant)) {
+                    el.style.filter = '';
+                    el.style.backdropFilter = '';
+                    el.style.backgroundColor = '';
+                    el.style.borderRadius = '';
+                    el.style.transition = '';
+                    delete el.dataset.waBlurInline;
+                    delete el.dataset.waElegant;
+                }
+                if (el.style && (el.style.filter?.includes('blur') || el.style.backdropFilter?.includes('blur'))) {
+                    el.style.filter = '';
+                    el.style.backdropFilter = '';
+                    el.style.backgroundColor = '';
                 }
             });
-            
-            const headerImgs = header.querySelectorAll('img');
-            headerImgs.forEach(img => img.classList.remove('wa-blur-image'));
+            const headerImgs = headerRoot.querySelectorAll('img');
+            headerImgs.forEach(img => {
+                img.classList.remove('wa-blur-image');
+                if (img.dataset && (img.dataset.waBlurInline || img.dataset.waElegant)) {
+                    img.style.filter = '';
+                    img.style.backdropFilter = '';
+                    img.style.backgroundColor = '';
+                    img.style.borderRadius = '';
+                    img.style.transition = '';
+                    delete img.dataset.waBlurInline;
+                    delete img.dataset.waElegant;
+                }
+                if (img.style && (img.style.filter?.includes('blur') || img.style.backdropFilter?.includes('blur'))) {
+                    img.style.filter = '';
+                    img.style.backdropFilter = '';
+                    img.style.backgroundColor = '';
+                }
+            });
         }
-        
-        // Remove blur from messages
+
+        // Clean message area (targeted selectors)
         const messageArea = document.querySelector('[data-testid="conversation-panel-messages"]') ||
                            document.querySelector('.message-list') ||
                            document.querySelector('[role="log"]');
-        
         if (messageArea) {
-            const allElements = messageArea.querySelectorAll('*');
-            allElements.forEach(el => {
-                if (el.textContent && el.textContent.trim().length > 3) {
-                    el.classList.remove('wa-blur-target');
+            const textTargets = messageArea.querySelectorAll('.wa-blur-target');
+            textTargets.forEach(el => {
+                el.classList.remove('wa-blur-target');
+                if (el.dataset && (el.dataset.waBlurInline || el.dataset.waElegant)) {
+                    el.style.filter = '';
+                    el.style.backdropFilter = '';
+                    el.style.backgroundColor = '';
+                    el.style.borderRadius = '';
+                    el.style.transition = '';
+                    delete el.dataset.waBlurInline;
+                    delete el.dataset.waElegant;
+                }
+                if (el.style && (el.style.filter?.includes('blur') || el.style.backdropFilter?.includes('blur'))) {
+                    el.style.filter = '';
+                    el.style.backdropFilter = '';
+                    el.style.backgroundColor = '';
                 }
             });
-            
-            const imgs = messageArea.querySelectorAll('img');
-            imgs.forEach(img => img.classList.remove('wa-blur-image'));
+
+            const imgTargets = messageArea.querySelectorAll('.wa-blur-image, img');
+            imgTargets.forEach(img => {
+                img.classList.remove('wa-blur-image');
+                if (img.dataset && (img.dataset.waBlurInline || img.dataset.waElegant)) {
+                    img.style.filter = '';
+                    img.style.backdropFilter = '';
+                    img.style.backgroundColor = '';
+                    img.style.borderRadius = '';
+                    img.style.transition = '';
+                    delete img.dataset.waBlurInline;
+                    delete img.dataset.waElegant;
+                }
+                if (img.style && (img.style.filter?.includes('blur') || img.style.backdropFilter?.includes('blur'))) {
+                    img.style.filter = '';
+                    img.style.backdropFilter = '';
+                    img.style.backgroundColor = '';
+                }
+            });
+
+            const overlays = messageArea.querySelectorAll('.wa-blur-overlay');
+            overlays.forEach(ov => ov.remove());
         }
     }
     
@@ -1005,11 +1125,8 @@ function blurAllUsers(users) {
     console.log(`  - Message area present: ${!!messageArea}`);
     console.log(`  - Blurred elements: ${document.querySelectorAll('.wa-blur-target, .wa-blur-image').length}`);
     
-    // Apply elegant blur instead of nuclear option
-    console.log('✨ Applying elegant blur to all elements');
-    setTimeout(() => {
-        applyElegantBlur();
-    }, 500);
+    // NOTE: Avoid applying global inline blur here to prevent side-effects.
+    // The per-user CSS classes handle the blur; no extra inline styling needed.
     
     return {
         success: successCount,
@@ -1423,6 +1540,7 @@ function blurContact(contactName, blurSettings, blurTypeSettings = { type: 'stan
                     transition: filter 0.3s ease !important;
                     position: relative !important;
                 `;
+                try { el.dataset.waBlurInline = '1'; } catch (e) {}
                 
                 console.log(`✅ Elegant fallback applied to element ${index + 1}`);
                 
@@ -1554,6 +1672,7 @@ function applyElegantBlur() {
                 transition: filter 0.3s ease !important;
                 position: relative !important;
             `;
+            try { span.dataset.waElegant = '1'; } catch (e) {}
             
             blurCount++;
         }
@@ -1569,6 +1688,7 @@ function applyElegantBlur() {
             border-radius: 8px !important;
             transition: filter 0.3s ease !important;
         `;
+        try { img.dataset.waElegant = '1'; } catch (e) {}
         blurCount++;
     });
     
@@ -1583,6 +1703,7 @@ function applyElegantBlur() {
                 border-radius: 3px !important;
                 transition: filter 0.3s ease !important;
             `;
+            try { span.dataset.waElegant = '1'; } catch (e) {}
             blurCount++;
         }
     });
