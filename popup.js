@@ -27,6 +27,15 @@ document.addEventListener('DOMContentLoaded', function() {
         messageImages: document.getElementById('messageImages')
     };
     
+    // Blur type elements
+    const blurTypeRadios = document.querySelectorAll('input[name="blurType"]');
+    const customBlurSettings = document.getElementById('customBlurSettings');
+    const blurIntensity = document.getElementById('blurIntensity');
+    const blurIntensityValue = document.getElementById('blurIntensityValue');
+    const overlayColor = document.getElementById('overlayColor');
+    const overlayOpacity = document.getElementById('overlayOpacity');
+    const overlayOpacityValue = document.getElementById('overlayOpacityValue');
+    
     // Load saved settings
     loadSettings();
     loadUsersList();
@@ -58,11 +67,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // Save contact name when input changes
     contactNameInput.addEventListener('input', saveSettings);
     
+    // Blur type event listeners
+    blurTypeRadios.forEach(radio => {
+        radio.addEventListener('change', handleBlurTypeChange);
+    });
+    
+    // Custom blur settings event listeners
+    if (blurIntensity) {
+        blurIntensity.addEventListener('input', updateBlurIntensityValue);
+    }
+    if (overlayOpacity) {
+        overlayOpacity.addEventListener('input', updateOverlayOpacityValue);
+    }
+    if (overlayColor) {
+        overlayColor.addEventListener('input', saveSettings);
+    }
+    
     function loadSettings() {
         chrome.storage.sync.get([
             'contactName',
             'blurSettings',
-            'isEnabled'
+            'isEnabled',
+            'blurType',
+            'customBlurSettings'
         ], function(result) {
             if (result.contactName) {
                 contactNameInput.value = result.contactName;
@@ -76,11 +103,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
             
+            // Load blur type settings
+            if (result.blurType) {
+                const blurTypeRadio = document.querySelector(`input[name="blurType"][value="${result.blurType}"]`);
+                if (blurTypeRadio) {
+                    blurTypeRadio.checked = true;
+                    handleBlurTypeChange();
+                }
+            }
+            
+            // Load custom blur settings
+            if (result.customBlurSettings) {
+                if (blurIntensity) {
+                    blurIntensity.value = result.customBlurSettings.intensity || 25;
+                    updateBlurIntensityValue();
+                }
+                if (overlayColor) {
+                    overlayColor.value = result.customBlurSettings.color || '#ff0000';
+                }
+                if (overlayOpacity) {
+                    overlayOpacity.value = result.customBlurSettings.opacity || 0.8;
+                    updateOverlayOpacityValue();
+                }
+            }
+            
             updateToggleButton(result.isEnabled);
         });
     }
     
     function saveSettings() {
+        const selectedBlurType = document.querySelector('input[name="blurType"]:checked');
+        const blurType = selectedBlurType ? selectedBlurType.value : 'standard';
+        
         const settings = {
             contactName: contactNameInput.value.trim(),
             blurSettings: {
@@ -91,10 +145,52 @@ document.addEventListener('DOMContentLoaded', function() {
                 headerAvatar: checkboxes.headerAvatar.checked,
                 messageText: checkboxes.messageText.checked,
                 messageImages: checkboxes.messageImages.checked
-            }
+            },
+            blurType: blurType
         };
         
+        // Save custom blur settings if custom type is selected
+        if (blurType === 'custom') {
+            settings.customBlurSettings = {
+                intensity: blurIntensity ? parseInt(blurIntensity.value) : 25,
+                color: overlayColor ? overlayColor.value : '#ff0000',
+                opacity: overlayOpacity ? parseFloat(overlayOpacity.value) : 0.8
+            };
+        }
+        
         chrome.storage.sync.set(settings);
+    }
+    
+    function handleBlurTypeChange() {
+        const selectedBlurType = document.querySelector('input[name="blurType"]:checked');
+        const blurType = selectedBlurType ? selectedBlurType.value : 'standard';
+        
+        // Show/hide custom blur settings
+        if (customBlurSettings) {
+            if (blurType === 'custom') {
+                customBlurSettings.style.display = 'block';
+            } else {
+                customBlurSettings.style.display = 'none';
+            }
+        }
+        
+        // Save settings when blur type changes
+        saveSettings();
+    }
+    
+    function updateBlurIntensityValue() {
+        if (blurIntensity && blurIntensityValue) {
+            blurIntensityValue.textContent = blurIntensity.value + 'px';
+            saveSettings();
+        }
+    }
+    
+    function updateOverlayOpacityValue() {
+        if (overlayOpacity && overlayOpacityValue) {
+            const opacity = Math.round(overlayOpacity.value * 100);
+            overlayOpacityValue.textContent = opacity + '%';
+            saveSettings();
+        }
     }
     
     function updateToggleButton(isEnabled) {
@@ -140,6 +236,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            // Get blur type settings
+            const selectedBlurType = document.querySelector('input[name="blurType"]:checked');
+            const blurType = selectedBlurType ? selectedBlurType.value : 'standard';
+            
+            let blurTypeSettings = { type: blurType };
+            if (blurType === 'custom') {
+                blurTypeSettings = {
+                    type: 'custom',
+                    intensity: blurIntensity ? parseInt(blurIntensity.value) : 25,
+                    color: overlayColor ? overlayColor.value : '#ff0000',
+                    opacity: overlayOpacity ? parseFloat(overlayOpacity.value) : 0.8
+                };
+            }
+            
             // Send message to content script
             chrome.tabs.sendMessage(currentTab.id, {
                 action: 'applyBlur',
@@ -152,7 +262,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     headerAvatar: checkboxes.headerAvatar.checked,
                     messageText: checkboxes.messageText.checked,
                     messageImages: checkboxes.messageImages.checked
-                }
+                },
+                blurTypeSettings: blurTypeSettings
             }, function(response) {
                 if (chrome.runtime.lastError) {
                     showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
@@ -261,11 +372,15 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="user-item" data-username="${user.name}">
                 <div class="user-info">
                     <div class="user-avatar">${user.name.charAt(0).toUpperCase()}</div>
-                    <div class="user-name">${user.name}</div>
-                    <div class="user-status">${user.isBlurred ? 'Blurred' : 'Visible'}</div>
+                    <div class="user-details">
+                        <div class="user-name">${user.name}</div>
+                        <div class="user-status">${user.isBlurred ? 'Blurred' : 'Visible'}</div>
+                        <div class="user-blur-type">${user.blurTypeSettings ? user.blurTypeSettings.type : 'standard'}</div>
+                    </div>
                 </div>
                 <div class="user-controls">
                     <div class="user-toggle ${user.isBlurred ? 'active' : ''}" data-username="${user.name}"></div>
+                    <button class="user-settings" data-username="${user.name}" title="User settings">⚙️</button>
                     <button class="user-remove" data-username="${user.name}" title="Remove user">×</button>
                 </div>
             </div>
@@ -297,6 +412,18 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
         
+        // Settings buttons
+        const settingsButtons = usersList.querySelectorAll('.user-settings');
+        settingsButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const userName = this.getAttribute('data-username');
+                openUserSettings(userName);
+            });
+        });
+        
         // Remove buttons
         const removeButtons = usersList.querySelectorAll('.user-remove');
         removeButtons.forEach(button => {
@@ -324,22 +451,36 @@ document.addEventListener('DOMContentLoaded', function() {
             scanUsersBtn.innerHTML = '<span class="loading"></span> Scanning...';
             scanUsersBtn.disabled = true;
             
+            // First, try to ping the content script to see if it's loaded
             chrome.tabs.sendMessage(currentTab.id, {
-                action: 'scanUsers'
+                action: 'ping'
             }, function(response) {
-                scanUsersBtn.innerHTML = '🔍 Scan for Users';
-                scanUsersBtn.disabled = false;
-                
                 if (chrome.runtime.lastError) {
-                    showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
-                } else if (response && response.success) {
-                    const users = response.users || [];
-                    saveUsersList(users);
-                    displayUsersList(users);
-                    showStatus(`Found ${users.length} users`, 'success');
-                } else {
-                    showStatus('Failed to scan for users', 'error');
+                    console.error('Content script not loaded:', chrome.runtime.lastError);
+                    scanUsersBtn.innerHTML = '🔍 Scan for Users';
+                    scanUsersBtn.disabled = false;
+                    showStatus('Content script not loaded. Please refresh the page.', 'error');
+                    return;
                 }
+                
+                // If ping successful, proceed with scan
+                chrome.tabs.sendMessage(currentTab.id, {
+                    action: 'scanUsers'
+                }, function(response) {
+                    scanUsersBtn.innerHTML = '🔍 Scan for Users';
+                    scanUsersBtn.disabled = false;
+                    
+                    if (chrome.runtime.lastError) {
+                        showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
+                    } else if (response && response.success) {
+                        const users = response.users || [];
+                        saveUsersList(users);
+                        displayUsersList(users);
+                        showStatus(`Found ${users.length} users`, 'success');
+                    } else {
+                        showStatus('Failed to scan for users', 'error');
+                    }
+                });
             });
         });
     }
@@ -351,17 +492,25 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Blur all users
     function blurAllUsers() {
+        console.log('🔒 Popup: blurAllUsers function called');
+        const startTime = performance.now();
+        
         chrome.storage.sync.get(['managedUsers'], function(result) {
             const users = result.managedUsers || [];
+            console.log('📊 Popup: Retrieved users from storage:', users);
             
             if (users.length === 0) {
+                console.warn('⚠️ Popup: No users found in storage');
                 showStatus('No users found. Please scan for users first.', 'error');
                 return;
             }
             
+            console.log(`📋 Popup: Processing ${users.length} users for blur operation`);
+            
             // Show loading state
             blurAllUsersBtn.innerHTML = '<span class="loading"></span> Blurring...';
             blurAllUsersBtn.disabled = true;
+            console.log('🔄 Popup: Set loading state for blur button');
             
             // Update all users to be blurred
             const updatedUsers = users.map(user => ({
@@ -369,42 +518,82 @@ document.addEventListener('DOMContentLoaded', function() {
                 isBlurred: true
             }));
             
+            console.log('✅ Popup: Updated all users to blurred state:', updatedUsers);
             saveUsersList(updatedUsers);
             displayUsersList(updatedUsers);
+            console.log('💾 Popup: Saved updated users list to storage');
             
             // Apply blur to all users on WhatsApp Web
             chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
                 const currentTab = tabs[0];
+                console.log('🔍 Popup: Current tab info:', {
+                    id: currentTab.id,
+                    url: currentTab.url,
+                    title: currentTab.title
+                });
+                
                 if (currentTab.url.includes('web.whatsapp.com')) {
-                    // Set a timeout to reset button state if no response
-                    const timeout = setTimeout(() => {
-                        blurAllUsersBtn.innerHTML = '🔒 Blur All Users';
-                        blurAllUsersBtn.disabled = false;
-                        showStatus('Blur operation completed', 'success');
-                    }, 5000); // 5 second timeout
+                    console.log('✅ Popup: WhatsApp Web tab confirmed, checking content script');
                     
-                    // Send a single message to blur all users at once
+                    // First, try to ping the content script to see if it's loaded
                     chrome.tabs.sendMessage(currentTab.id, {
-                        action: 'blurAllUsers',
-                        users: updatedUsers
+                        action: 'ping'
                     }, function(response) {
-                        // Clear timeout
-                        clearTimeout(timeout);
-                        
-                        // Reset button state
-                        blurAllUsersBtn.innerHTML = '🔒 Blur All Users';
-                        blurAllUsersBtn.disabled = false;
-                        
                         if (chrome.runtime.lastError) {
-                            console.error('Error sending blur all message:', chrome.runtime.lastError);
-                            showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
-                        } else if (response && response.success) {
-                            showStatus(`Blurred ${updatedUsers.length} users`, 'success');
-                        } else {
-                            showStatus('Failed to blur all users', 'error');
+                            console.error('❌ Popup: Content script not loaded:', chrome.runtime.lastError);
+                            blurAllUsersBtn.innerHTML = '🔒 Blur All Users';
+                            blurAllUsersBtn.disabled = false;
+                            showStatus('Content script not loaded. Please refresh the page.', 'error');
+                            return;
                         }
+                        
+                        console.log('✅ Popup: Content script confirmed, sending blur message');
+                        
+                        // Set a timeout to reset button state if no response
+                        const timeout = setTimeout(() => {
+                            console.warn('⏰ Popup: Timeout reached, resetting button state');
+                            blurAllUsersBtn.innerHTML = '🔒 Blur All Users';
+                            blurAllUsersBtn.disabled = false;
+                            showStatus('Blur operation completed (timeout)', 'success');
+                        }, 5000); // 5 second timeout
+                        
+                        console.log('📤 Popup: Sending blurAllUsers message to content script:', {
+                            action: 'blurAllUsers',
+                            users: updatedUsers,
+                            userCount: updatedUsers.length
+                        });
+                        
+                        // Send a single message to blur all users at once
+                        chrome.tabs.sendMessage(currentTab.id, {
+                            action: 'blurAllUsers',
+                            users: updatedUsers
+                        }, function(response) {
+                            const endTime = performance.now();
+                            const totalTime = (endTime - startTime).toFixed(2);
+                            
+                            // Clear timeout
+                            clearTimeout(timeout);
+                            console.log(`⏱️ Popup: Blur operation completed in ${totalTime}ms`);
+                            
+                            // Reset button state
+                            blurAllUsersBtn.innerHTML = '🔒 Blur All Users';
+                            blurAllUsersBtn.disabled = false;
+                            console.log('🔄 Popup: Reset button state');
+                            
+                            if (chrome.runtime.lastError) {
+                                console.error('❌ Popup: Error sending blur all message:', chrome.runtime.lastError);
+                                showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
+                            } else if (response && response.success) {
+                                console.log('✅ Popup: Blur all operation successful:', response);
+                                showStatus(`Blurred ${updatedUsers.length} users`, 'success');
+                            } else {
+                                console.error('❌ Popup: Blur all operation failed:', response);
+                                showStatus('Failed to blur all users', 'error');
+                            }
+                        });
                     });
                 } else {
+                    console.warn('⚠️ Popup: Not on WhatsApp Web, current URL:', currentTab.url);
                     blurAllUsersBtn.innerHTML = '🔒 Blur All Users';
                     blurAllUsersBtn.disabled = false;
                     showStatus('Please open WhatsApp Web first', 'error');
@@ -544,6 +733,123 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 console.error('User not found:', userName);
                 showStatus('User not found', 'error');
+            }
+        });
+    }
+    
+    // Open user settings modal
+    function openUserSettings(userName) {
+        chrome.storage.sync.get(['managedUsers'], function(result) {
+            const users = result.managedUsers || [];
+            const user = users.find(u => u.name === userName);
+            
+            if (!user) {
+                showStatus('User not found', 'error');
+                return;
+            }
+            
+            // Create modal for user settings
+            const modal = document.createElement('div');
+            modal.className = 'user-settings-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Settings for ${userName}</h3>
+                        <button class="modal-close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="setting-group">
+                            <label>Blur Type:</label>
+                            <select id="userBlurType" class="blur-type-select">
+                                <option value="standard" ${user.blurTypeSettings?.type === 'standard' ? 'selected' : ''}>Standard Blur</option>
+                                <option value="pixelated" ${user.blurTypeSettings?.type === 'pixelated' ? 'selected' : ''}>Pixelated</option>
+                                <option value="blackout" ${user.blurTypeSettings?.type === 'blackout' ? 'selected' : ''}>Blackout</option>
+                                <option value="invisible" ${user.blurTypeSettings?.type === 'invisible' ? 'selected' : ''}>Invisible</option>
+                                <option value="custom" ${user.blurTypeSettings?.type === 'custom' ? 'selected' : ''}>Custom</option>
+                            </select>
+                        </div>
+                        <div class="setting-group">
+                            <label>Blur Elements:</label>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" ${user.blurSettings?.chatListName ? 'checked' : ''}> Chat List Name</label>
+                                <label><input type="checkbox" ${user.blurSettings?.chatListMessage ? 'checked' : ''}> Chat List Message</label>
+                                <label><input type="checkbox" ${user.blurSettings?.chatListAvatar ? 'checked' : ''}> Chat List Avatar</label>
+                                <label><input type="checkbox" ${user.blurSettings?.headerName ? 'checked' : ''}> Header Name</label>
+                                <label><input type="checkbox" ${user.blurSettings?.headerAvatar ? 'checked' : ''}> Header Avatar</label>
+                                <label><input type="checkbox" ${user.blurSettings?.messageText ? 'checked' : ''}> Message Text</label>
+                                <label><input type="checkbox" ${user.blurSettings?.messageImages ? 'checked' : ''}> Message Images</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary modal-cancel">Cancel</button>
+                        <button class="btn btn-primary modal-save">Save</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Event listeners for modal
+            modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+            modal.querySelector('.modal-cancel').addEventListener('click', () => modal.remove());
+            modal.querySelector('.modal-save').addEventListener('click', () => {
+                saveUserSettings(userName, modal);
+                modal.remove();
+            });
+            
+            // Close modal when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        });
+    }
+    
+    // Save user settings
+    function saveUserSettings(userName, modal) {
+        const blurType = modal.querySelector('#userBlurType').value;
+        const checkboxes = modal.querySelectorAll('.checkbox-group input[type="checkbox"]');
+        
+        const blurSettings = {
+            chatListName: checkboxes[0].checked,
+            chatListMessage: checkboxes[1].checked,
+            chatListAvatar: checkboxes[2].checked,
+            headerName: checkboxes[3].checked,
+            headerAvatar: checkboxes[4].checked,
+            messageText: checkboxes[5].checked,
+            messageImages: checkboxes[6].checked
+        };
+        
+        const blurTypeSettings = { type: blurType };
+        
+        chrome.storage.sync.get(['managedUsers'], function(result) {
+            const users = result.managedUsers || [];
+            const userIndex = users.findIndex(u => u.name === userName);
+            
+            if (userIndex !== -1) {
+                users[userIndex].blurSettings = blurSettings;
+                users[userIndex].blurTypeSettings = blurTypeSettings;
+                
+                saveUsersList(users);
+                displayUsersList(users);
+                
+                // Apply new settings to WhatsApp Web
+                chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+                    const currentTab = tabs[0];
+                    if (currentTab.url.includes('web.whatsapp.com')) {
+                        chrome.tabs.sendMessage(currentTab.id, {
+                            action: 'toggleUserBlur',
+                            userName: userName,
+                            isBlurred: users[userIndex].isBlurred,
+                            blurSettings: blurSettings,
+                            blurTypeSettings: blurTypeSettings
+                        });
+                    }
+                });
+                
+                showStatus(`Settings updated for ${userName}`, 'success');
             }
         });
     }

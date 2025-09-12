@@ -27,6 +27,86 @@
             </div>
             
             <div class="settings-section">
+                <h3>Blur Type</h3>
+                
+                <div class="blur-type-selection">
+                    <div class="blur-type-option">
+                        <label class="radio-label">
+                            <input type="radio" name="blurType" value="standard" checked>
+                            <span class="radio-mark"></span>
+                            <div class="blur-type-info">
+                                <strong>Standard Blur</strong>
+                                <small>Classic blur effect with red overlay</small>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="blur-type-option">
+                        <label class="radio-label">
+                            <input type="radio" name="blurType" value="pixelated">
+                            <span class="radio-mark"></span>
+                            <div class="blur-type-info">
+                                <strong>Pixelated</strong>
+                                <small>Pixelated mosaic effect</small>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="blur-type-option">
+                        <label class="radio-label">
+                            <input type="radio" name="blurType" value="blackout">
+                            <span class="radio-mark"></span>
+                            <div class="blur-type-info">
+                                <strong>Blackout</strong>
+                                <small>Complete black overlay</small>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="blur-type-option">
+                        <label class="radio-label">
+                            <input type="radio" name="blurType" value="invisible">
+                            <span class="radio-mark"></span>
+                            <div class="blur-type-info">
+                                <strong>Invisible</strong>
+                                <small>Make content completely invisible</small>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="blur-type-option">
+                        <label class="radio-label">
+                            <input type="radio" name="blurType" value="custom">
+                            <span class="radio-mark"></span>
+                            <div class="blur-type-info">
+                                <strong>Custom</strong>
+                                <small>Custom blur with adjustable intensity</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="custom-blur-settings" id="customBlurSettings" style="display: none;">
+                    <div class="setting-item">
+                        <label for="blurIntensity">Blur Intensity:</label>
+                        <input type="range" id="blurIntensity" min="5" max="50" value="25" step="5">
+                        <span id="blurIntensityValue">25px</span>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="overlayColor">Overlay Color:</label>
+                        <input type="color" id="overlayColor" value="#ff0000">
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="overlayOpacity">Overlay Opacity:</label>
+                        <input type="range" id="overlayOpacity" min="0.1" max="1" value="0.8" step="0.1">
+                        <span id="overlayOpacityValue">80%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-section">
                 <h3>Blur Settings</h3>
                 
                 <div class="setting-item">
