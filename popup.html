@@ -15,12 +15,12 @@
         
         <!-- Tab Navigation -->
         <div class="tab-navigation">
-            <button class="tab-btn active" data-tab="settings">Settings</button>
-            <button class="tab-btn" data-tab="users">Manage Users</button>
+            <button class="tab-btn active" data-tab="users">Manage Users</button>
+            <button class="tab-btn" data-tab="settings">Settings</button>
         </div>
         
         <!-- Settings Tab -->
-        <div id="settings-tab" class="tab-content active">
+        <div id="settings-tab" class="tab-content">
             <div class="form-group">
                 <label for="contactName">Contact Name to Blur:</label>
                 <input type="text" id="contactName" placeholder="Enter contact name (e.g., John Doe)" />
@@ -94,7 +94,7 @@
         </div>
         
         <!-- Users Management Tab -->
-        <div id="users-tab" class="tab-content">
+        <div id="users-tab" class="tab-content active">
             <div class="users-header">
                 <h3>👥 Manage Users</h3>
                 <p>Detect and manage blur settings for all visible users</p>
@@ -102,6 +102,8 @@
             
             <div class="users-controls">
                 <button id="scanUsersBtn" class="btn btn-primary">🔍 Scan for Users</button>
+                <button id="blurAllUsersBtn" class="btn btn-secondary">🔒 Blur All Users</button>
+                <button id="unblurAllUsersBtn" class="btn btn-secondary">👁️ Unblur All Users</button>
                 <button id="clearAllUsersBtn" class="btn btn-danger">🗑️ Clear All Users</button>
             </div>
             

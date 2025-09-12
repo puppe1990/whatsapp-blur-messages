@@ -301,14 +301,24 @@ body {
 
 .users-controls {
     display: flex;
-    gap: 10px;
+    gap: 6px;
     margin-bottom: 20px;
+    flex-wrap: wrap;
 }
 
 .users-controls .btn {
     flex: 1;
-    font-size: 13px;
-    padding: 10px 16px;
+    font-size: 11px;
+    padding: 8px 10px;
+    min-width: 0;
+}
+
+.users-controls .btn:first-child {
+    flex: 1.3;
+}
+
+.users-controls .btn:last-child {
+    flex: 0.7;
 }
 
 .users-list {

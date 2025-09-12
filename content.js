@@ -47,6 +47,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             sendResponse({success: true});
             break;
             
+        case 'blurAllUsers':
+            console.log('Content script received blurAllUsers:', request);
+            blurAllUsers(request.users);
+            sendResponse({success: true});
+            break;
+            
+        case 'unblurAllUsers':
+            console.log('Content script received unblurAllUsers:', request);
+            unblurAllUsers(request.users);
+            sendResponse({success: true});
+            break;
+            
         default:
             sendResponse({success: false, error: 'Unknown action'});
     }
@@ -278,11 +290,81 @@ function scanForUsers() {
     const users = [];
     const seenNames = new Set();
     
+    // Function to check if an element should be excluded from user scanning
+    function shouldExcludeFromScan(element) {
+        const navigationIdentifiers = [
+            'chat-filled-refreshed',
+            'chat-filled-refreshed1',
+            'status-refreshed', 
+            'newsletter-outline',
+            'community-refreshed-32',
+            'settings-refreshed'
+        ];
+        
+        // Exclude navigation elements by data-testid
+        const testId = element.getAttribute('data-testid');
+        if (testId && navigationIdentifiers.includes(testId)) {
+            return true;
+        }
+        
+        // Exclude navigation elements by title attribute
+        const title = element.getAttribute('title');
+        if (title && navigationIdentifiers.includes(title.trim())) {
+            return true;
+        }
+        
+        // Exclude navigation elements by class names that might contain these identifiers
+        const className = element.className;
+        if (className && typeof className === 'string') {
+            for (let identifier of navigationIdentifiers) {
+                if (className.includes(identifier)) {
+                    return true;
+                }
+            }
+        }
+        
+        // Exclude navigation elements by text content
+        const textContent = element.textContent && element.textContent.trim();
+        if (textContent && navigationIdentifiers.includes(textContent)) {
+            return true;
+        }
+        
+        // Exclude elements that are likely navigation buttons/icons
+        if (element.tagName === 'BUTTON' || element.tagName === 'A') {
+            // Check if it's in a navigation area
+            const navParent = element.closest('nav, [role="navigation"], [data-testid*="nav"]');
+            if (navParent) {
+                return true;
+            }
+        }
+        
+        // Exclude single character text content (likely navigation icons)
+        if (textContent && textContent.length === 1) {
+            return true;
+        }
+        
+        return false;
+    }
+    
     // Look for user names in chat list
     const chatSpans = document.querySelectorAll("span[title]");
     chatSpans.forEach(span => {
         const title = span.getAttribute('title');
-        if (title && title.trim() && !seenNames.has(title.trim())) {
+        if (title && title.trim() && !seenNames.has(title.trim()) && !shouldExcludeFromScan(span)) {
+            // Exclude navigation elements by their title attribute
+            const excludedTitles = [
+                'chat-filled-refreshed',
+                'chat-filled-refreshed1',
+                'status-refreshed', 
+                'newsletter-outline',
+                'community-refreshed-32',
+                'settings-refreshed'
+            ];
+            
+            if (excludedTitles.includes(title.trim())) {
+                return; // Skip this element
+            }
+            
             // Check if this looks like a contact name (not a message preview)
             const parent = span.closest('div[role="listitem"]') || span.closest('div[tabindex]');
             if (parent) {
@@ -305,7 +387,21 @@ function scanForUsers() {
         const headerElements = header.querySelectorAll('*');
         headerElements.forEach(el => {
             const text = el.textContent && el.textContent.trim();
-            if (text && text.length > 0 && text.length < 50 && !seenNames.has(text)) {
+            if (text && text.length > 0 && text.length < 50 && !seenNames.has(text) && !shouldExcludeFromScan(el)) {
+                // Exclude navigation elements by their text content
+                const excludedTexts = [
+                    'chat-filled-refreshed',
+                    'chat-filled-refreshed1',
+                    'status-refreshed', 
+                    'newsletter-outline',
+                    'community-refreshed-32',
+                    'settings-refreshed'
+                ];
+                
+                if (excludedTexts.includes(text)) {
+                    return; // Skip this element
+                }
+                
                 // Check if this looks like a contact name
                 if (!text.includes(' ') || text.split(' ').length <= 3) {
                     users.push({
@@ -424,6 +520,68 @@ function removeUserBlur(userName) {
     console.log('Removed blur for user:', userName);
 }
 
+// Blur all users at once
+function blurAllUsers(users) {
+    console.log('blurAllUsers called with:', users);
+    
+    if (!users || users.length === 0) {
+        console.log('No users provided to blur');
+        return;
+    }
+    
+    // Clear existing managed users
+    managedUsers.clear();
+    
+    // Add all users to managed users and apply blur
+    users.forEach(user => {
+        if (user.isBlurred) {
+            managedUsers.set(user.name, {
+                name: user.name,
+                isBlurred: true,
+                blurSettings: {
+                    chatListName: true,
+                    chatListMessage: true,
+                    chatListAvatar: true,
+                    headerName: true,
+                    headerAvatar: true,
+                    messageText: true,
+                    messageImages: true
+                }
+            });
+            
+            // Apply blur for this user
+            blurContact(user.name, managedUsers.get(user.name).blurSettings);
+        }
+    });
+    
+    // Ensure blur observer is set up
+    if (!blurObserver) {
+        setupBlurObserver();
+    }
+    
+    console.log('Applied blur to all users:', Array.from(managedUsers.keys()));
+}
+
+// Unblur all users at once
+function unblurAllUsers(users) {
+    console.log('unblurAllUsers called with:', users);
+    
+    if (!users || users.length === 0) {
+        console.log('No users provided to unblur');
+        return;
+    }
+    
+    // Remove all users from managed users and clear their blur
+    users.forEach(user => {
+        if (managedUsers.has(user.name)) {
+            managedUsers.delete(user.name);
+            removeUserBlur(user.name);
+        }
+    });
+    
+    console.log('Removed blur from all users:', users.map(u => u.name));
+}
+
 // Clear all users
 function clearAllUsers() {
     managedUsers.clear();
@@ -451,11 +609,58 @@ function blurContact(contactName, blurSettings) {
         currentChatContext = newChatContext;
     }
     
+    // Function to check if an element should be excluded from blurring
+    function shouldExcludeElement(element) {
+        // Exclude navigation elements by data-testid
+        const testId = element.getAttribute('data-testid');
+        if (testId) {
+            const excludedTestIds = [
+                'chat-filled-refreshed',
+                'status-refreshed', 
+                'newsletter-outline',
+                'community-refreshed-32',
+                'settings-refreshed'
+            ];
+            if (excludedTestIds.includes(testId)) {
+                return true;
+            }
+        }
+        
+        // Exclude navigation elements by class names that might contain these identifiers
+        const className = element.className;
+        if (className && typeof className === 'string') {
+            const excludedClasses = [
+                'chat-filled-refreshed',
+                'status-refreshed',
+                'newsletter-outline', 
+                'community-refreshed-32',
+                'settings-refreshed'
+            ];
+            
+            for (let excludedClass of excludedClasses) {
+                if (className.includes(excludedClass)) {
+                    return true;
+                }
+            }
+        }
+        
+        // Exclude elements that are likely navigation buttons/icons
+        if (element.tagName === 'BUTTON' || element.tagName === 'A') {
+            // Check if it's in a navigation area
+            const navParent = element.closest('nav, [role="navigation"], [data-testid*="nav"]');
+            if (navParent) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
     // 1. Always blur chat list items
     if (blurSettings.chatListName || blurSettings.chatListMessage || blurSettings.chatListAvatar) {
         const chatSpans = document.querySelectorAll("span[title]");
         chatSpans.forEach(span => {
-            if (span.getAttribute('title') === contactName) {
+            if (span.getAttribute('title') === contactName && !shouldExcludeElement(span)) {
                 if (blurSettings.chatListName && !span.classList.contains('wa-blur-target')) {
                     span.classList.add('wa-blur-target');
                     lastBlurredElements.add(span);
@@ -468,7 +673,7 @@ function blurContact(contactName, blurSettings) {
                     if (currentIndex + 1 < allSpans.length) {
                         const nextSpan = allSpans[currentIndex + 1];
                         if (nextSpan && nextSpan.textContent && nextSpan.textContent.trim().length > 3 && 
-                            !nextSpan.classList.contains('wa-blur-target')) {
+                            !nextSpan.classList.contains('wa-blur-target') && !shouldExcludeElement(nextSpan)) {
                             nextSpan.classList.add('wa-blur-target');
                             lastBlurredElements.add(nextSpan);
                         }
@@ -480,7 +685,7 @@ function blurContact(contactName, blurSettings) {
                     const container = span.closest('div[role="listitem"]') || span.closest('div[tabindex]');
                     if (container) {
                         const img = container.querySelector('img');
-                        if (img && !img.classList.contains('wa-blur-image')) {
+                        if (img && !img.classList.contains('wa-blur-image') && !shouldExcludeElement(img)) {
                             img.classList.add('wa-blur-image');
                             lastBlurredElements.add(img);
                         }
@@ -499,7 +704,7 @@ function blurContact(contactName, blurSettings) {
                 const allElements = header.querySelectorAll('*');
                 allElements.forEach(el => {
                     if (el.textContent && el.textContent.trim() === contactName && 
-                        !el.classList.contains('wa-blur-target')) {
+                        !el.classList.contains('wa-blur-target') && !shouldExcludeElement(el)) {
                         el.classList.add('wa-blur-target');
                         lastBlurredElements.add(el);
                     }
@@ -510,7 +715,7 @@ function blurContact(contactName, blurSettings) {
             if (blurSettings.headerAvatar) {
                 const headerImgs = header.querySelectorAll('img');
                 headerImgs.forEach(img => {
-                    if (!img.classList.contains('wa-blur-image')) {
+                    if (!img.classList.contains('wa-blur-image') && !shouldExcludeElement(img)) {
                         img.classList.add('wa-blur-image');
                         lastBlurredElements.add(img);
                     }
@@ -530,7 +735,7 @@ function blurContact(contactName, blurSettings) {
                     const allElements = messageArea.querySelectorAll('*');
                     allElements.forEach(el => {
                         if (el.textContent && el.textContent.trim().length > 3 && 
-                            !el.classList.contains('wa-blur-target')) {
+                            !el.classList.contains('wa-blur-target') && !shouldExcludeElement(el)) {
                             const text = el.textContent.trim();
                             if (text.includes(' ') || text.includes('?') || text.includes('!') || 
                                 text.includes('.') || text.includes(',') || /[a-z]/.test(text)) {
@@ -544,7 +749,7 @@ function blurContact(contactName, blurSettings) {
                 if (blurSettings.messageImages) {
                     const imgs = messageArea.querySelectorAll('img');
                     imgs.forEach(img => {
-                        if (!img.classList.contains('wa-blur-image')) {
+                        if (!img.classList.contains('wa-blur-image') && !shouldExcludeElement(img)) {
                             img.classList.add('wa-blur-image');
                             lastBlurredElements.add(img);
                         }
@@ -558,7 +763,7 @@ function blurContact(contactName, blurSettings) {
                         const textEls = msg.querySelectorAll('span, div');
                         textEls.forEach(el => {
                             if (el.textContent && el.textContent.trim().length > 3 && 
-                                !el.classList.contains('wa-blur-target')) {
+                                !el.classList.contains('wa-blur-target') && !shouldExcludeElement(el)) {
                                 el.classList.add('wa-blur-target');
                                 lastBlurredElements.add(el);
                             }
@@ -567,7 +772,7 @@ function blurContact(contactName, blurSettings) {
                     if (blurSettings.messageImages) {
                         const imgs = msg.querySelectorAll('img');
                         imgs.forEach(img => {
-                            if (!img.classList.contains('wa-blur-image')) {
+                            if (!img.classList.contains('wa-blur-image') && !shouldExcludeElement(img)) {
                                 img.classList.add('wa-blur-image');
                                 lastBlurredElements.add(img);
                             }

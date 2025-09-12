@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Users management elements
     const scanUsersBtn = document.getElementById('scanUsersBtn');
+    const blurAllUsersBtn = document.getElementById('blurAllUsersBtn');
+    const unblurAllUsersBtn = document.getElementById('unblurAllUsersBtn');
     const clearAllUsersBtn = document.getElementById('clearAllUsersBtn');
     const usersList = document.getElementById('usersList');
     
@@ -44,6 +46,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Users management event listeners
     scanUsersBtn.addEventListener('click', scanForUsers);
+    blurAllUsersBtn.addEventListener('click', blurAllUsers);
+    unblurAllUsersBtn.addEventListener('click', unblurAllUsers);
     clearAllUsersBtn.addEventListener('click', clearAllUsers);
     
     // Save settings when checkboxes change
@@ -343,6 +347,134 @@ document.addEventListener('DOMContentLoaded', function() {
     // Save users list to storage
     function saveUsersList(users) {
         chrome.storage.sync.set({managedUsers: users});
+    }
+    
+    // Blur all users
+    function blurAllUsers() {
+        chrome.storage.sync.get(['managedUsers'], function(result) {
+            const users = result.managedUsers || [];
+            
+            if (users.length === 0) {
+                showStatus('No users found. Please scan for users first.', 'error');
+                return;
+            }
+            
+            // Show loading state
+            blurAllUsersBtn.innerHTML = '<span class="loading"></span> Blurring...';
+            blurAllUsersBtn.disabled = true;
+            
+            // Update all users to be blurred
+            const updatedUsers = users.map(user => ({
+                ...user,
+                isBlurred: true
+            }));
+            
+            saveUsersList(updatedUsers);
+            displayUsersList(updatedUsers);
+            
+            // Apply blur to all users on WhatsApp Web
+            chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+                const currentTab = tabs[0];
+                if (currentTab.url.includes('web.whatsapp.com')) {
+                    // Set a timeout to reset button state if no response
+                    const timeout = setTimeout(() => {
+                        blurAllUsersBtn.innerHTML = '🔒 Blur All Users';
+                        blurAllUsersBtn.disabled = false;
+                        showStatus('Blur operation completed', 'success');
+                    }, 5000); // 5 second timeout
+                    
+                    // Send a single message to blur all users at once
+                    chrome.tabs.sendMessage(currentTab.id, {
+                        action: 'blurAllUsers',
+                        users: updatedUsers
+                    }, function(response) {
+                        // Clear timeout
+                        clearTimeout(timeout);
+                        
+                        // Reset button state
+                        blurAllUsersBtn.innerHTML = '🔒 Blur All Users';
+                        blurAllUsersBtn.disabled = false;
+                        
+                        if (chrome.runtime.lastError) {
+                            console.error('Error sending blur all message:', chrome.runtime.lastError);
+                            showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
+                        } else if (response && response.success) {
+                            showStatus(`Blurred ${updatedUsers.length} users`, 'success');
+                        } else {
+                            showStatus('Failed to blur all users', 'error');
+                        }
+                    });
+                } else {
+                    blurAllUsersBtn.innerHTML = '🔒 Blur All Users';
+                    blurAllUsersBtn.disabled = false;
+                    showStatus('Please open WhatsApp Web first', 'error');
+                }
+            });
+        });
+    }
+    
+    // Unblur all users
+    function unblurAllUsers() {
+        chrome.storage.sync.get(['managedUsers'], function(result) {
+            const users = result.managedUsers || [];
+            
+            if (users.length === 0) {
+                showStatus('No users found. Please scan for users first.', 'error');
+                return;
+            }
+            
+            // Show loading state
+            unblurAllUsersBtn.innerHTML = '<span class="loading"></span> Unblurring...';
+            unblurAllUsersBtn.disabled = true;
+            
+            // Update all users to be unblurred
+            const updatedUsers = users.map(user => ({
+                ...user,
+                isBlurred: false
+            }));
+            
+            saveUsersList(updatedUsers);
+            displayUsersList(updatedUsers);
+            
+            // Apply unblur to all users on WhatsApp Web
+            chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+                const currentTab = tabs[0];
+                if (currentTab.url.includes('web.whatsapp.com')) {
+                    // Set a timeout to reset button state if no response
+                    const timeout = setTimeout(() => {
+                        unblurAllUsersBtn.innerHTML = '👁️ Unblur All Users';
+                        unblurAllUsersBtn.disabled = false;
+                        showStatus('Unblur operation completed', 'success');
+                    }, 5000); // 5 second timeout
+                    
+                    // Send a single message to unblur all users at once
+                    chrome.tabs.sendMessage(currentTab.id, {
+                        action: 'unblurAllUsers',
+                        users: updatedUsers
+                    }, function(response) {
+                        // Clear timeout
+                        clearTimeout(timeout);
+                        
+                        // Reset button state
+                        unblurAllUsersBtn.innerHTML = '👁️ Unblur All Users';
+                        unblurAllUsersBtn.disabled = false;
+                        
+                        if (chrome.runtime.lastError) {
+                            console.error('Error sending unblur all message:', chrome.runtime.lastError);
+                            showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
+                        } else if (response && response.success) {
+                            showStatus(`Unblurred ${updatedUsers.length} users`, 'success');
+                        } else {
+                            showStatus('Failed to unblur all users', 'error');
+                        }
+                    });
+                } else {
+                    unblurAllUsersBtn.innerHTML = '👁️ Unblur All Users';
+                    unblurAllUsersBtn.disabled = false;
+                    showStatus('Please open WhatsApp Web first', 'error');
+                }
+            });
+        });
     }
     
     // Clear all users

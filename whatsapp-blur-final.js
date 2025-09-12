@@ -123,11 +123,58 @@
       currentChatContext = newChatContext;
     }
     
+    // Function to check if an element should be excluded from blurring
+    function shouldExcludeElement(element) {
+      // Exclude navigation elements by data-testid
+      const testId = element.getAttribute('data-testid');
+      if (testId) {
+        const excludedTestIds = [
+          'chat-filled-refreshed',
+          'status-refreshed', 
+          'newsletter-outline',
+          'community-refreshed-32',
+          'settings-refreshed'
+        ];
+        if (excludedTestIds.includes(testId)) {
+          return true;
+        }
+      }
+      
+      // Exclude navigation elements by class names that might contain these identifiers
+      const className = element.className;
+      if (className && typeof className === 'string') {
+        const excludedClasses = [
+          'chat-filled-refreshed',
+          'status-refreshed',
+          'newsletter-outline', 
+          'community-refreshed-32',
+          'settings-refreshed'
+        ];
+        
+        for (let excludedClass of excludedClasses) {
+          if (className.includes(excludedClass)) {
+            return true;
+          }
+        }
+      }
+      
+      // Exclude elements that are likely navigation buttons/icons
+      if (element.tagName === 'BUTTON' || element.tagName === 'A') {
+        // Check if it's in a navigation area
+        const navParent = element.closest('nav, [role="navigation"], [data-testid*="nav"]');
+        if (navParent) {
+          return true;
+        }
+      }
+      
+      return false;
+    }
+    
     // 1. Always blur chat list items (this works regardless of which chat is open)
     if (blurSettings.chatListName || blurSettings.chatListMessage || blurSettings.chatListAvatar) {
       const chatSpans = document.querySelectorAll("span[title]");
       chatSpans.forEach(span => {
-        if (span.getAttribute('title') === nameToBlur) {
+        if (span.getAttribute('title') === nameToBlur && !shouldExcludeElement(span)) {
           console.log('✅ Found target in chat list');
           
           if (blurSettings.chatListName && !span.classList.contains('wa-blur-target')) {
@@ -142,7 +189,7 @@
             if (currentIndex + 1 < allSpans.length) {
               const nextSpan = allSpans[currentIndex + 1];
               if (nextSpan && nextSpan.textContent && nextSpan.textContent.trim().length > 3 && 
-                  !nextSpan.classList.contains('wa-blur-target')) {
+                  !nextSpan.classList.contains('wa-blur-target') && !shouldExcludeElement(nextSpan)) {
                 nextSpan.classList.add('wa-blur-target');
                 lastBlurredElements.add(nextSpan);
               }
@@ -154,7 +201,7 @@
             const container = span.closest('div[role="listitem"]') || span.closest('div[tabindex]');
             if (container) {
               const img = container.querySelector('img');
-              if (img && !img.classList.contains('wa-blur-image')) {
+              if (img && !img.classList.contains('wa-blur-image') && !shouldExcludeElement(img)) {
                 img.classList.add('wa-blur-image');
                 lastBlurredElements.add(img);
               }
@@ -175,7 +222,7 @@
           const allElements = header.querySelectorAll('*');
           allElements.forEach(el => {
             if (el.textContent && el.textContent.trim() === nameToBlur && 
-                !el.classList.contains('wa-blur-target')) {
+                !el.classList.contains('wa-blur-target') && !shouldExcludeElement(el)) {
               console.log('📝 Blurring header name');
               el.classList.add('wa-blur-target');
               lastBlurredElements.add(el);
@@ -188,7 +235,7 @@
           const headerImgs = header.querySelectorAll('img');
           console.log(`🖼️ Found ${headerImgs.length} header images`);
           headerImgs.forEach(img => {
-            if (!img.classList.contains('wa-blur-image')) {
+            if (!img.classList.contains('wa-blur-image') && !shouldExcludeElement(img)) {
               img.classList.add('wa-blur-image');
               lastBlurredElements.add(img);
             }
@@ -213,7 +260,7 @@
             let blurredCount = 0;
             allElements.forEach(el => {
               if (el.textContent && el.textContent.trim().length > 3 && 
-                  !el.classList.contains('wa-blur-target')) {
+                  !el.classList.contains('wa-blur-target') && !shouldExcludeElement(el)) {
                 const text = el.textContent.trim();
                 // Check if it looks like a message (contains spaces, punctuation, etc.)
                 if (text.includes(' ') || text.includes('?') || text.includes('!') || 
@@ -231,7 +278,7 @@
             const imgs = messageArea.querySelectorAll('img');
             console.log(`🖼️ Found ${imgs.length} images in messages`);
             imgs.forEach(img => {
-              if (!img.classList.contains('wa-blur-image')) {
+              if (!img.classList.contains('wa-blur-image') && !shouldExcludeElement(img)) {
                 img.classList.add('wa-blur-image');
                 lastBlurredElements.add(img);
               }
@@ -247,7 +294,7 @@
               const textEls = msg.querySelectorAll('span, div');
               textEls.forEach(el => {
                 if (el.textContent && el.textContent.trim().length > 3 && 
-                    !el.classList.contains('wa-blur-target')) {
+                    !el.classList.contains('wa-blur-target') && !shouldExcludeElement(el)) {
                   el.classList.add('wa-blur-target');
                   lastBlurredElements.add(el);
                 }
@@ -256,7 +303,7 @@
             if (blurSettings.messageImages) {
               const imgs = msg.querySelectorAll('img');
               imgs.forEach(img => {
-                if (!img.classList.contains('wa-blur-image')) {
+                if (!img.classList.contains('wa-blur-image') && !shouldExcludeElement(img)) {
                   img.classList.add('wa-blur-image');
                   lastBlurredElements.add(img);
                 }
