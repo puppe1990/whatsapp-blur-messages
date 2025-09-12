@@ -1018,32 +1018,110 @@ function blurAllUsers(users) {
 
 // Unblur all users at once
 function unblurAllUsers(users) {
-    console.log('unblurAllUsers called with:', users);
+    console.log('🔓 Unblurring all users:', users?.map(u => u.name));
     
-    if (!users || users.length === 0) {
-        console.log('No users provided to unblur');
-        return;
-    }
+    // Clear all managed users
+    managedUsers.clear();
     
-    // Remove all users from managed users and clear their blur
-    users.forEach(user => {
-        if (managedUsers.has(user.name)) {
-            managedUsers.delete(user.name);
-            removeUserBlur(user.name);
+    // Comprehensive unblur - remove all blur styles from the page
+    removeAllBlurStyles();
+    
+    console.log('✅ All blur removed from page');
+}
+
+// Comprehensive function to remove ALL blur styles
+function removeAllBlurStyles() {
+    console.log('🧹 Removing all blur styles from page...');
+    
+    // Remove all CSS classes
+    const blurredElements = document.querySelectorAll('.wa-blur-target, .wa-blur-image');
+    console.log(`📊 Found ${blurredElements.length} elements with blur classes`);
+    
+    blurredElements.forEach((el, index) => {
+        console.log(`🔓 Removing blur from element ${index + 1}`);
+        el.classList.remove('wa-blur-target', 'wa-blur-image');
+    });
+    
+    // Remove ALL inline blur styles from the entire page
+    const allElements = document.querySelectorAll('*');
+    let inlineStylesRemoved = 0;
+    
+    allElements.forEach(el => {
+        if (el.style.filter && el.style.filter.includes('blur')) {
+            console.log(`🧹 Removing inline blur from: ${el.tagName}`);
+            
+            // Remove blur-related styles
+            el.style.filter = '';
+            el.style.backdropFilter = '';
+            el.style.backgroundColor = '';
+            el.style.border = '';
+            el.style.borderRadius = '';
+            el.style.boxShadow = '';
+            
+            // Restore original content if it was saved
+            if (el.dataset.originalContent) {
+                el.innerHTML = el.dataset.originalContent;
+                delete el.dataset.originalContent;
+            }
+            
+            // Remove any blur overlays
+            const overlay = el.querySelector('.wa-blur-overlay');
+            if (overlay) {
+                overlay.remove();
+            }
+            
+            inlineStylesRemoved++;
         }
     });
     
-    console.log('Removed blur from all users:', users.map(u => u.name));
+    // Remove any remaining overlays
+    const overlays = document.querySelectorAll('.wa-blur-overlay');
+    overlays.forEach(overlay => overlay.remove());
+    
+    // Remove any success/test messages
+    const testElements = document.querySelectorAll('#wa-blur-test');
+    testElements.forEach(el => el.remove());
+    
+    console.log(`🧹 Removed inline styles from ${inlineStylesRemoved} elements`);
+    console.log(`🧹 Removed ${overlays.length} overlay elements`);
+    
+    // Show success message
+    const successDiv = document.createElement('div');
+    successDiv.style.cssText = `
+        position: fixed !important;
+        top: 20px !important;
+        right: 20px !important;
+        background: rgba(76, 175, 80, 0.9) !important;
+        color: white !important;
+        padding: 12px 16px !important;
+        border-radius: 8px !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        z-index: 999999 !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+    `;
+    successDiv.innerHTML = `🔓 All blur removed successfully!`;
+    
+    document.body.appendChild(successDiv);
+    
+    setTimeout(() => {
+        successDiv.remove();
+    }, 3000);
 }
 
 // Clear all users
 function clearAllUsers() {
+    console.log('🧹 Clearing all users and blur styles...');
+    
     managedUsers.clear();
     clearAllBlurClasses();
     lastBlurredElements.clear();
     currentChatContext = null;
     
-    console.log('Cleared all users');
+    // Also remove all inline styles (same as unblur all)
+    removeAllBlurStyles();
+    
+    console.log('✅ All users and blur styles cleared');
 }
 
 // Enhanced blur function that works with multiple users
