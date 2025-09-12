@@ -86,9 +86,9 @@
     
     <div class="test-section">
         <h2>Manual Tests</h2>
-        <button onclick="testBlur()">Test Blur Function</button>
-        <button onclick="testClear()">Test Clear Function</button>
-        <button onclick="testToggle()">Test Toggle Function</button>
+        <button id="testBlurBtn">Test Blur Function</button>
+        <button id="testClearBtn">Test Clear Function</button>
+        <button id="testToggleBtn">Test Toggle Function</button>
     </div>
     
     <div class="test-section">
@@ -97,58 +97,6 @@
         <p>Expected: No CSP violations related to inline scripts or unsafe-eval.</p>
     </div>
 
-    <script>
-        // Test the blur functionality
-        function testBlur() {
-            console.log('Testing blur function...');
-            
-            // Simulate the blur function
-            const elements = document.querySelectorAll('span[title="Romeu Junior"]');
-            elements.forEach(el => {
-                el.classList.add('blur-target');
-            });
-            
-            const images = document.querySelectorAll('img');
-            images.forEach(img => {
-                img.classList.add('blur-image');
-            });
-            
-            document.getElementById('status').innerHTML = '<span class="success">✓ Blur test completed - check elements above</span>';
-        }
-        
-        function testClear() {
-            console.log('Testing clear function...');
-            
-            document.querySelectorAll('.blur-target, .blur-image').forEach(el => {
-                el.classList.remove('blur-target', 'blur-image');
-            });
-            
-            document.getElementById('status').innerHTML = '<span class="success">✓ Clear test completed</span>';
-        }
-        
-        function testToggle() {
-            console.log('Testing toggle function...');
-            
-            const hasBlur = document.querySelector('.blur-target, .blur-image');
-            if (hasBlur) {
-                testClear();
-            } else {
-                testBlur();
-            }
-        }
-        
-        // Check for CSP violations
-        window.addEventListener('error', function(e) {
-            if (e.message.includes('Content Security Policy') || e.message.includes('CSP')) {
-                document.getElementById('status').innerHTML = '<span class="error">✗ CSP Violation detected: ' + e.message + '</span>';
-            }
-        });
-        
-        // Initial status
-        document.getElementById('status').innerHTML = '<span class="success">✓ Test page loaded successfully - no CSP violations detected</span>';
-        
-        console.log('WhatsApp Blur Extension Test Page loaded');
-        console.log('This page simulates WhatsApp content for testing the blur functionality');
-    </script>
+    <script src="test.js"></script>
 </body>
 </html>

@@ -5,7 +5,8 @@
   "description": "Blur messages from specific WhatsApp contacts to maintain privacy",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "contextMenus"
   ],
   "host_permissions": [
     "https://web.whatsapp.com/*"

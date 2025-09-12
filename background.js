@@ -91,17 +91,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 });
 
-// Handle extension icon click
-chrome.action.onClicked.addListener((tab) => {
-    if (tab.url && tab.url.includes('web.whatsapp.com')) {
-        // Open popup (this is handled by manifest.json action)
-        return;
-    } else {
-        // If not on WhatsApp Web, open WhatsApp Web
-        chrome.tabs.create({
-            url: 'https://web.whatsapp.com'
-        });
-    }
-});
+// Note: chrome.action.onClicked is not available when a popup is defined in manifest.json
+// The popup will handle the extension icon click instead
 
 console.log('WhatsApp Blur Background Script loaded');
