@@ -16,6 +16,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const clearAllUsersBtn = document.getElementById('clearAllUsersBtn');
     const usersList = document.getElementById('usersList');
     
+    // Search elements
+    const userSearchInput = document.getElementById('userSearchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    
     // Checkbox elements
     const checkboxes = {
         chatListName: document.getElementById('chatListName'),
@@ -58,6 +62,10 @@ document.addEventListener('DOMContentLoaded', function() {
     blurAllUsersBtn.addEventListener('click', blurAllUsers);
     unblurAllUsersBtn.addEventListener('click', unblurAllUsers);
     clearAllUsersBtn.addEventListener('click', clearAllUsers);
+    
+    // Search event listeners
+    userSearchInput.addEventListener('input', handleUserSearch);
+    clearSearchBtn.addEventListener('click', clearUserSearch);
     
     // Save settings when checkboxes change
     Object.keys(checkboxes).forEach(key => {
@@ -877,5 +885,102 @@ document.addEventListener('DOMContentLoaded', function() {
                 showStatus(`${userName} removed`, 'success');
             });
         }
+    }
+    
+    // Search functionality
+    function handleUserSearch() {
+        const searchTerm = userSearchInput.value.trim().toLowerCase();
+        
+        // Show/hide clear button
+        if (searchTerm.length > 0) {
+            clearSearchBtn.classList.add('visible');
+        } else {
+            clearSearchBtn.classList.remove('visible');
+        }
+        
+        // Filter and display users
+        filterAndDisplayUsers(searchTerm);
+    }
+    
+    function clearUserSearch() {
+        userSearchInput.value = '';
+        clearSearchBtn.classList.remove('visible');
+        filterAndDisplayUsers('');
+        
+        // Clear any search-related status messages
+        const statusMessage = document.getElementById('statusMessage');
+        if (statusMessage.textContent.includes('Found') || statusMessage.textContent.includes('matching')) {
+            statusMessage.textContent = '';
+            statusMessage.className = 'status-message';
+        }
+    }
+    
+    function filterAndDisplayUsers(searchTerm) {
+        chrome.storage.sync.get(['managedUsers'], function(result) {
+            const users = result.managedUsers || [];
+            
+            if (searchTerm === '') {
+                // Show all users without highlighting
+                displayUsersList(users);
+            } else {
+                // Filter users and highlight matches (case-insensitive)
+                const filteredUsers = users.filter(user => 
+                    user.name.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                
+                if (filteredUsers.length === 0) {
+                    // Show no results message
+                    usersList.innerHTML = `
+                        <div class="no-users-message">
+                            <p>🔍 No users found matching "${searchTerm}"</p>
+                            <small>Try a different search term or check spelling</small>
+                        </div>
+                    `;
+                } else {
+                    // Display filtered users with highlighting
+                    displayUsersListWithHighlight(filteredUsers, searchTerm);
+                    
+                    // Show search results count
+                    showStatus(`Found ${filteredUsers.length} user${filteredUsers.length === 1 ? '' : 's'} matching "${searchTerm}"`, 'info');
+                }
+            }
+        });
+    }
+    
+    function displayUsersListWithHighlight(users, searchTerm) {
+        usersList.innerHTML = users.map(user => {
+            const highlightedName = highlightSearchTerm(user.name, searchTerm);
+            return `
+                <div class="user-item highlighted" data-username="${user.name}">
+                    <div class="user-info">
+                        <div class="user-avatar">${user.name.charAt(0).toUpperCase()}</div>
+                        <div class="user-details">
+                            <div class="user-name">${highlightedName}</div>
+                            <div class="user-status">${user.isBlurred ? 'Blurred' : 'Visible'}</div>
+                            <div class="user-blur-type">${user.blurTypeSettings ? user.blurTypeSettings.type : 'standard'}</div>
+                        </div>
+                    </div>
+                    <div class="user-controls">
+                        <div class="user-toggle ${user.isBlurred ? 'active' : ''}" data-username="${user.name}"></div>
+                        <button class="user-settings" data-username="${user.name}" title="User settings">⚙️</button>
+                        <button class="user-remove" data-username="${user.name}" title="Remove user">×</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Add event listeners to the newly created elements
+        addUserEventListeners();
+    }
+    
+    function highlightSearchTerm(text, searchTerm) {
+        if (!searchTerm) return text;
+        
+        const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+        return text.replace(regex, '<span class="search-highlight">$1</span>');
+    }
+    
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 });
