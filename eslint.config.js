@@ -23,6 +23,31 @@ export default [
         }
     },
     {
+        // Shared mutable state of the content-script modules (declared in content-state.js).
+        // Registered here so every module can read/write it without per-file global comments.
+        files: [
+            'content.js',
+            'blur-styles.js',
+            'whatsapp-dom.js',
+            'blur-controller.js',
+            'blur-contact.js',
+            'user-scanner.js',
+            'user-bulk-actions.js',
+            'wpp-export.js'
+        ],
+        languageOptions: {
+            globals: {
+                isBlurEnabled: 'writable',
+                currentSettings: 'writable',
+                blurObserver: 'writable',
+                lastBlurredElements: 'writable',
+                currentChatContext: 'writable',
+                managedUsers: 'writable',
+                WPP_EXPORT: 'writable'
+            }
+        }
+    },
+    {
         files: ['tests/**/*.js', '*.config.js'],
         languageOptions: {
             sourceType: 'module',

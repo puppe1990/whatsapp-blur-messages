@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
     createChromeMock,
     evaluateInPage,
-    loadExtensionScript,
+    loadContentScripts,
     sendContentMessage,
     setupBrowserEnvironment
 } from './helpers/extension-harness.js';
@@ -40,7 +40,7 @@ let chromeMock;
 beforeAll(() => {
     setupBrowserEnvironment();
     chromeMock = createChromeMock();
-    loadExtensionScript('content.js', chromeMock.chrome);
+    loadContentScripts(chromeMock.chrome);
 });
 
 beforeEach(() => {

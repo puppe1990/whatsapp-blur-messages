@@ -14,15 +14,25 @@
 ## Structure
 
 - `manifest.json`: MV3 config; content scripts run in the order listed.
-- `content.js`: injected into `web.whatsapp.com`; blur engine, user scanner and WPP export extractor (~2900 lines — over budget; split by responsibility before adding logic).
+- Content scripts (injected into `web.whatsapp.com`, one shared scope, no imports):
+    - `content-state.js`: shared mutable state (loaded first).
+    - `blur-styles.js`: blur CSS generators per blur type.
+    - `whatsapp-dom.js`: chat-context detection and `NAVIGATION_EXCLUSIONS`.
+    - `blur-controller.js`: apply/toggle/clear, mutation observer, re-apply monitoring.
+    - `blur-contact.js`: per-contact blur across chat list, header and messages.
+    - `user-scanner.js`: scan visible users, toggle/remove blur per user.
+    - `user-bulk-actions.js`: blur/unblur all, full style cleanup, clear list.
+    - `wpp-export.js`: message extractor (~930 lines — over budget; split before adding logic).
+    - `content.js`: message router and startup bootstrap (loaded last).
 - `background.js`: service worker; context menu and storage defaults.
 - `popup.html` / `popup.css` / `popup.js`: popup UI, tabs, bulk actions (~1200 lines — over budget; split before adding logic).
 - `test.html` / `test.js`: local manual test page.
-- `tests/`: Vitest + jsdom tests mirroring the content script message API, background handlers and manifest/CSP invariants.
+- `tests/`: Vitest + jsdom tests mirroring the content script message API, background handlers and manifest/CSP invariants; the harness loads the content scripts in manifest order.
 - Legacy dumps: `whatsapp-blur-*.js` — ignored by lint/format; never ship new logic there.
 
 ## Conventions
 
+- Content scripts share one scope: declare APIs a file consumes with `/* global */` and ones it provides with `/* exported */`; load order lives in `manifest.json`.
 - JavaScript: 4‑space indent, single quotes, semicolons — enforced by Prettier.
 - Naming: camelCase for vars/functions; PascalCase only for classes/components.
 - DOM/CSS: toggle classes instead of inline styles where possible; keep injected CSS in a `<style>` with a stable id and clean it up on clear.

@@ -117,6 +117,20 @@ export function loadExtensionScript(relativePath, chromeMock) {
     vm.runInThisContext(source, { filename: relativePath });
 }
 
+export function contentScriptFiles() {
+    const manifest = JSON.parse(readFileSync(join(ROOT_DIR, 'manifest.json'), 'utf8'));
+    return manifest.content_scripts.flatMap((script) => script.js ?? []);
+}
+
+export function loadContentScripts(chromeMock) {
+    silenceConsole();
+    globalThis.chrome = chromeMock;
+
+    contentScriptFiles().forEach((file) => {
+        vm.runInThisContext(readFileSync(join(ROOT_DIR, file), 'utf8'), { filename: file });
+    });
+}
+
 export function evaluateInPage(expression) {
     return vm.runInThisContext(expression);
 }

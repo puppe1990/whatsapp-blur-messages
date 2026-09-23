@@ -13,6 +13,13 @@ describe('manifest.json', () => {
         expect(manifest.content_scripts?.[0]?.matches).toEqual(['https://web.whatsapp.com/*']);
     });
 
+    it('loads shared state first and the message router last', () => {
+        const files = manifest.content_scripts[0].js;
+
+        expect(files[0]).toBe('content-state.js');
+        expect(files.at(-1)).toBe('content.js');
+    });
+
     it('references only files that exist', () => {
         const referencedFiles = [
             manifest.action.default_popup,
