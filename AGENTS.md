@@ -33,6 +33,7 @@
 ## Conventions
 
 - Content scripts share one scope: declare APIs a file consumes with `/* global */` and ones it provides with `/* exported */`; load order lives in `manifest.json`.
+- Storage: the contact list (`managedUsers`, including each contact's hide/show state) lives in `chrome.storage.local`; UI settings stay in `chrome.storage.sync`.
 - JavaScript: 4‑space indent, single quotes, semicolons — enforced by Prettier.
 - Naming: camelCase for vars/functions; PascalCase only for classes/components.
 - DOM/CSS: toggle classes instead of inline styles where possible; keep injected CSS in a `<style>` with a stable id and clean it up on clear.
