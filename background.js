@@ -3,7 +3,7 @@
 // Handle extension installation
 chrome.runtime.onInstalled.addListener((details) => {
     console.log('WhatsApp Blur Extension installed');
-    
+
     // Set default settings
     chrome.storage.sync.set({
         contactName: '',
@@ -18,7 +18,7 @@ chrome.runtime.onInstalled.addListener((details) => {
         },
         isEnabled: false
     });
-    
+
     // Create context menu item
     chrome.contextMenus.create({
         id: 'whatsapp-blur',
@@ -33,13 +33,13 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === 'whatsapp-blur' && info.selectionText) {
         // Get the selected text as contact name
         const contactName = info.selectionText.trim();
-        
+
         // Save the contact name
         chrome.storage.sync.set({
             contactName: contactName,
             isEnabled: true
         });
-        
+
         // Send message to content script to apply blur
         chrome.tabs.sendMessage(tab.id, {
             action: 'applyBlur',
@@ -62,7 +62,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.status === 'complete' && tab.url && tab.url.includes('web.whatsapp.com')) {
         // Wait a bit for WhatsApp to load, then check if we need to re-apply blur
         setTimeout(() => {
-            chrome.storage.sync.get(['contactName', 'blurSettings', 'isEnabled'], function(result) {
+            chrome.storage.sync.get(['contactName', 'blurSettings', 'isEnabled'], function (result) {
                 if (result.isEnabled && result.contactName && result.blurSettings) {
                     chrome.tabs.sendMessage(tabId, {
                         action: 'applyBlur',
@@ -83,7 +83,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             text: request.isEnabled ? 'ON' : 'OFF',
             tabId: sender.tab.id
         });
-        
+
         chrome.action.setBadgeBackgroundColor({
             color: request.isEnabled ? '#25D366' : '#ff4757',
             tabId: sender.tab.id
