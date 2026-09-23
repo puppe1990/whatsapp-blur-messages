@@ -32,7 +32,8 @@ function blurAllUsers(users) {
                 const userSettings = {
                     name: user.name,
                     isBlurred: true,
-                    blurSettings: {
+                    // Settings sent by the popup win; all-elements + standard is the last resort
+                    blurSettings: user.blurSettings || {
                         chatListName: true,
                         chatListMessage: true,
                         chatListAvatar: true,
@@ -41,7 +42,7 @@ function blurAllUsers(users) {
                         messageText: true,
                         messageImages: true
                     },
-                    blurTypeSettings: { type: 'standard' }
+                    blurTypeSettings: user.blurTypeSettings || { type: 'standard' }
                 };
 
                 managedUsers.set(user.name, userSettings);

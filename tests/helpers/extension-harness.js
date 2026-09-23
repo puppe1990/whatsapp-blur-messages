@@ -39,10 +39,10 @@ function silenceConsole() {
     });
 }
 
-export function setupBrowserEnvironment() {
+export function setupBrowserEnvironment(html = '<!doctype html><html><head></head><body></body></html>') {
     silenceConsole();
 
-    const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', {
+    const dom = new JSDOM(html, {
         url: 'https://web.whatsapp.com/',
         pretendToBeVisual: true
     });
