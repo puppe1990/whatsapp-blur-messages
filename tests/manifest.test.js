@@ -41,6 +41,14 @@ describe('manifest.json', () => {
         expect(manifest.host_permissions).toEqual(['https://web.whatsapp.com/*']);
     });
 
+    it('loads the content scripts in manifest order in test.html', () => {
+        const html = readFileSync(join(ROOT_DIR, 'test.html'), 'utf8');
+        const contentScripts = manifest.content_scripts[0].js;
+        const loadedScripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((match) => match[1]);
+
+        expect(loadedScripts.filter((file) => contentScripts.includes(file))).toEqual(contentScripts);
+    });
+
     it('has no inline scripts in extension pages (MV3 CSP)', () => {
         ['popup.html', 'test.html'].forEach((file) => {
             const html = readFileSync(join(ROOT_DIR, file), 'utf8');
