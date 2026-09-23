@@ -87,6 +87,43 @@ describe('popup bulk actions', () => {
     });
 });
 
+describe('scanning users', () => {
+    it('keeps saved preferences and appends the newly found contacts', () => {
+        chromeMock.chrome.storage.local.get.mockImplementation((keys, callback) =>
+            callback({
+                managedUsers: [
+                    { name: 'Romeu Junior', isBlurred: true, blurTypeSettings: { type: 'hide' } },
+                    { name: 'Ana Souza', isBlurred: false }
+                ]
+            })
+        );
+        chromeMock.chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+            if (message.action === 'scanUsers') {
+                callback({
+                    success: true,
+                    users: [
+                        { name: 'Romeu Junior', isBlurred: false },
+                        { name: 'Novo Contato', isBlurred: false }
+                    ]
+                });
+                return;
+            }
+
+            callback({ success: true });
+        });
+
+        document.getElementById('scanUsersBtn').click();
+
+        expect(chromeMock.chrome.storage.local.set).toHaveBeenCalledWith({
+            managedUsers: [
+                { name: 'Romeu Junior', isBlurred: true, blurTypeSettings: { type: 'hide' } },
+                { name: 'Ana Souza', isBlurred: false },
+                { name: 'Novo Contato', isBlurred: false }
+            ]
+        });
+    });
+});
+
 describe('contact list storage', () => {
     it('migrates the list from chrome.storage.sync to local once', () => {
         expect(migratedUserNames).toEqual(['Romeu Junior']);
