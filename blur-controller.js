@@ -1,5 +1,5 @@
 /* exported clearAllBlurClasses, setupBlurObserver, applyBlur, toggleBlur, clearBlur */
-/* global addBlurStyles, blurContact */
+/* global addBlurStyles, blurContact, findConversationHeader, getOpenChatName */
 // Blur lifecycle: apply/toggle/clear, mutation observer and re-apply monitoring.
 
 // Clear all blur classes
@@ -113,9 +113,56 @@ function clearBlur() {
     console.log('Blur cleared');
 }
 
+const CONVERSATION_SCOPE_SELECTOR = [
+    '[data-testid="conversation-panel-messages"]',
+    '.message-list',
+    '[role="log"]'
+].join(', ');
+
+function releaseMark(element) {
+    element.classList.remove('wa-blur-target', 'wa-blur-image', 'wa-hidden-row');
+    if (element.style) {
+        element.style.filter = '';
+        element.style.backdropFilter = '';
+    }
+    delete element.dataset.waBlurUser;
+}
+
+// WhatsApp recycles list rows and message nodes for other chats, so a mark can
+// end up blurring/hiding the wrong chat. This reverts those stale marks.
+function reconcileChatMarks() {
+    const openChat = getOpenChatName();
+    const conversationHeader = findConversationHeader();
+
+    document.querySelectorAll('[data-wa-blur-user]').forEach((element) => {
+        const owner = element.dataset.waBlurUser;
+        if (!owner) return;
+
+        const inConversation =
+            Boolean(element.closest(CONVERSATION_SCOPE_SELECTOR)) ||
+            Boolean(conversationHeader && conversationHeader.contains(element));
+
+        if (!inConversation) {
+            const row = element.closest('div[role="listitem"], div[tabindex]');
+            const titleSpan = row ? row.querySelector('span[title]') : null;
+            const currentName = titleSpan ? (titleSpan.getAttribute('title') || '').trim() : '';
+
+            if (currentName && currentName !== owner) {
+                releaseMark(element);
+            }
+            return;
+        }
+
+        if (!openChat || owner === openChat) return;
+        releaseMark(element);
+    });
+}
+
 // Continuous monitoring to ensure blur stays applied
 function startBlurMonitoring() {
     setInterval(() => {
+        reconcileChatMarks();
+
         const blurredElements = document.querySelectorAll('.wa-blur-target, .wa-blur-image');
         blurredElements.forEach((el) => {
             const computedStyle = window.getComputedStyle(el);

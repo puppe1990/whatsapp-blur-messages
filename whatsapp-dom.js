@@ -1,4 +1,4 @@
-/* exported NAVIGATION_EXCLUSIONS, findConversationHeader, isInTargetChat, isNavigationChrome */
+/* exported NAVIGATION_EXCLUSIONS, findConversationHeader, getOpenChatName, isInTargetChat, isNavigationChrome */
 // WhatsApp DOM helpers: chat-context detection and navigation-element exclusions.
 
 // Navigation chrome of WhatsApp that must never be treated as a contact or blurred.
@@ -32,6 +32,17 @@ function findConversationHeader() {
 
     const headers = Array.from(document.querySelectorAll('header'));
     return headers.find((header) => header.querySelector('span[title]')) || headers[0] || null;
+}
+
+// Name of the chat currently open, or null when it cannot be told apart
+// (the nav rail is also a header and carries no title span).
+function getOpenChatName() {
+    const header = findConversationHeader();
+    const titleSpan = header ? header.querySelector('span[title]') : null;
+    if (!titleSpan) return null;
+
+    const name = (titleSpan.getAttribute('title') || '').trim();
+    return name || null;
 }
 
 // Check if we're currently in the target chat
