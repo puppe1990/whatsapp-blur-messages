@@ -12,7 +12,17 @@
     "content_scripts": [
         {
             "matches": ["https://web.whatsapp.com/*"],
-            "js": ["content.js"],
+            "js": [
+                "content-state.js",
+                "blur-styles.js",
+                "whatsapp-dom.js",
+                "blur-controller.js",
+                "blur-contact.js",
+                "user-scanner.js",
+                "user-bulk-actions.js",
+                "wpp-export.js",
+                "content.js"
+            ],
             "run_at": "document_end"
         }
     ],
