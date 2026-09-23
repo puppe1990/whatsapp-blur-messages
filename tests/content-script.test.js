@@ -171,6 +171,36 @@ const WHATSAPP_CHROME_FIXTURE = `
     </header>
 `;
 
+const MESSAGE_MEDIA_FIXTURE = `
+    <header>
+        <span title="Romeu Junior">Romeu Junior</span>
+    </header>
+    <div data-testid="conversation-panel-messages">
+        <div class="message-in">
+            <img src="photo.jpg" alt="photo" />
+            <video src="clip.mp4"></video>
+            <iframe src="https://webtp.whatsapp.net/pdf-viewer/"></iframe>
+        </div>
+    </div>
+`;
+
+describe('message media coverage', () => {
+    it('blurs videos and embedded previews along with images', () => {
+        document.body.innerHTML = MESSAGE_MEDIA_FIXTURE;
+
+        sendContentMessage(chromeMock, {
+            action: 'applyBlur',
+            contactName: 'Romeu Junior',
+            blurSettings: ALL_BLUR_SETTINGS,
+            blurTypeSettings: { type: 'standard' }
+        });
+
+        expect(document.querySelector('img').classList.contains('wa-blur-image')).toBe(true);
+        expect(document.querySelector('video').classList.contains('wa-blur-image')).toBe(true);
+        expect(document.querySelector('iframe').classList.contains('wa-blur-image')).toBe(true);
+    });
+});
+
 describe('bulk blur honors the selected blur type', () => {
     it('hides users whose blur type is hide', () => {
         document.body.innerHTML = CHAT_FIXTURE;

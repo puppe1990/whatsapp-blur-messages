@@ -257,19 +257,20 @@ function blurContact(contactName, blurSettings, blurTypeSettings = { type: 'stan
                 }
 
                 if (blurSettings.messageImages) {
-                    const imgs = messageArea.querySelectorAll('img');
-                    console.log(`🖼️ Found ${imgs.length} message images to check`);
-                    imgs.forEach((img) => {
-                        if (!img.classList.contains('wa-blur-image') && !shouldExcludeElement(img)) {
-                            img.classList.add('wa-blur-image');
+                    // Includes videos and embedded previews (e.g. the PDF viewer iframe)
+                    const mediaElements = messageArea.querySelectorAll('img, video, iframe');
+                    console.log(`🖼️ Found ${mediaElements.length} message media elements to check`);
+                    mediaElements.forEach((media) => {
+                        if (!media.classList.contains('wa-blur-image') && !shouldExcludeElement(media)) {
+                            media.classList.add('wa-blur-image');
                             try {
-                                img.dataset.waBlurUser = contactName;
+                                media.dataset.waBlurUser = contactName;
                             } catch (e) {}
-                            lastBlurredElements.add(img);
+                            lastBlurredElements.add(media);
                             elementsBlurred.messageImages++;
                         }
                     });
-                    console.log(`📸 Blurred ${elementsBlurred.messageImages} message images`);
+                    console.log(`📸 Blurred ${elementsBlurred.messageImages} message media elements`);
                 }
             } else {
                 console.log(`⚠️ No message area found, using fallback method`);
@@ -293,11 +294,11 @@ function blurContact(contactName, blurSettings, blurTypeSettings = { type: 'stan
                         });
                     }
                     if (blurSettings.messageImages) {
-                        const imgs = msg.querySelectorAll('img');
-                        imgs.forEach((img) => {
-                            if (!img.classList.contains('wa-blur-image') && !shouldExcludeElement(img)) {
-                                img.classList.add('wa-blur-image');
-                                lastBlurredElements.add(img);
+                        const mediaElements = msg.querySelectorAll('img, video, iframe');
+                        mediaElements.forEach((media) => {
+                            if (!media.classList.contains('wa-blur-image') && !shouldExcludeElement(media)) {
+                                media.classList.add('wa-blur-image');
+                                lastBlurredElements.add(media);
                                 elementsBlurred.messageImages++;
                             }
                         });

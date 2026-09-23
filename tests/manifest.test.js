@@ -37,6 +37,10 @@ describe('manifest.json', () => {
         expect(new Set(manifest.permissions)).toEqual(new Set(['activeTab', 'storage', 'contextMenus']));
     });
 
+    it('keeps host access limited to WhatsApp Web', () => {
+        expect(manifest.host_permissions).toEqual(['https://web.whatsapp.com/*']);
+    });
+
     it('has no inline scripts in extension pages (MV3 CSP)', () => {
         ['popup.html', 'test.html'].forEach((file) => {
             const html = readFileSync(join(ROOT_DIR, file), 'utf8');
