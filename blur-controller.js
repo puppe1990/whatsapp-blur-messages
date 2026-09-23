@@ -4,8 +4,8 @@
 
 // Clear all blur classes
 function clearAllBlurClasses() {
-    document.querySelectorAll('.wa-blur-target, .wa-blur-image').forEach((el) => {
-        el.classList.remove('wa-blur-target', 'wa-blur-image');
+    document.querySelectorAll('.wa-blur-target, .wa-blur-image, .wa-hidden-row').forEach((el) => {
+        el.classList.remove('wa-blur-target', 'wa-blur-image', 'wa-hidden-row');
     });
 }
 

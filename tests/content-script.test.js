@@ -239,6 +239,35 @@ describe('hide mode', () => {
 
         expect(document.getElementById('wa-blur-style')?.textContent).toContain('display: none !important');
     });
+
+    it('collapses the chat row so timestamps and badges disappear', () => {
+        document.body.innerHTML = CHAT_FIXTURE;
+
+        sendContentMessage(chromeMock, {
+            action: 'applyBlur',
+            contactName: 'Romeu Junior',
+            blurSettings: ALL_BLUR_SETTINGS,
+            blurTypeSettings: { type: 'hide' }
+        });
+
+        expect(document.querySelector('div[role="listitem"]').classList.contains('wa-hidden-row')).toBe(true);
+    });
+
+    it('restores the chat row when the user blur is removed', () => {
+        document.body.innerHTML = CHAT_FIXTURE;
+        sendContentMessage(chromeMock, {
+            action: 'toggleUserBlur',
+            userName: 'Romeu Junior',
+            isBlurred: true,
+            blurSettings: ALL_BLUR_SETTINGS,
+            blurTypeSettings: { type: 'hide' }
+        });
+        expect(document.querySelector('.wa-hidden-row')).not.toBeNull();
+
+        sendContentMessage(chromeMock, { action: 'removeUserBlur', userName: 'Romeu Junior' });
+
+        expect(document.querySelector('.wa-hidden-row')).toBeNull();
+    });
 });
 
 describe('isInTargetChat', () => {

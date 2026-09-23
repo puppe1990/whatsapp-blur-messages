@@ -2,6 +2,18 @@
 /* global NAVIGATION_EXCLUSIONS, addBlurStyles, isInTargetChat, isNavigationChrome */
 // Per-contact blur application across chat list, header and messages.
 
+// Hide mode: the row wrapper (timestamp, unread badge) is not a blur target,
+// so tag it explicitly and let the hide CSS collapse the whole row.
+function hideChatRow(nameSpan, contactName) {
+    const row = nameSpan.closest('div[role="listitem"]') || nameSpan.closest('div[tabindex]');
+    if (!row || row.classList.contains('wa-hidden-row')) return;
+
+    row.classList.add('wa-hidden-row');
+    try {
+        row.dataset.waBlurUser = contactName;
+    } catch (e) {}
+}
+
 // Enhanced blur function that works with multiple users
 function blurContact(contactName, blurSettings, blurTypeSettings = { type: 'standard' }) {
     if (!contactName) {
@@ -83,6 +95,10 @@ function blurContact(contactName, blurSettings, blurTypeSettings = { type: 'stan
         chatSpans.forEach((span, index) => {
             if (span.getAttribute('title') === contactName && !shouldExcludeElement(span)) {
                 console.log(`✅ Found matching span for "${contactName}" at index ${index}`);
+
+                if (blurTypeSettings.type === 'hide') {
+                    hideChatRow(span, contactName);
+                }
 
                 if (blurSettings.chatListName && !span.classList.contains('wa-blur-target')) {
                     span.classList.add('wa-blur-target');

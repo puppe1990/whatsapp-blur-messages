@@ -149,7 +149,7 @@ function removeUserBlur(userName) {
         const selector = `[data-wa-blur-user="${escapeCSS(userName)}"]`;
         const tagged = document.querySelectorAll(selector);
         tagged.forEach((el) => {
-            el.classList.remove('wa-blur-target', 'wa-blur-image');
+            el.classList.remove('wa-blur-target', 'wa-blur-image', 'wa-hidden-row');
             if (el.style) {
                 el.style.filter = '';
                 el.style.backdropFilter = '';

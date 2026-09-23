@@ -314,7 +314,8 @@ function generateInvisibleBlurCSS() {
 function generateHideBlurCSS() {
     return `
         .wa-blur-target,
-        .wa-blur-image {
+        .wa-blur-image,
+        .wa-hidden-row {
             display: none !important;
         }
         /* Collapse the whole chat row that contains hidden content */

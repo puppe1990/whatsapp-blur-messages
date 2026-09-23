@@ -133,12 +133,12 @@ function removeAllBlurStyles() {
     console.log('🧹 Removing all blur styles from page...');
 
     // Remove all CSS classes
-    const blurredElements = document.querySelectorAll('.wa-blur-target, .wa-blur-image');
+    const blurredElements = document.querySelectorAll('.wa-blur-target, .wa-blur-image, .wa-hidden-row');
     console.log(`📊 Found ${blurredElements.length} elements with blur classes`);
 
     blurredElements.forEach((el, index) => {
         console.log(`🔓 Removing blur from element ${index + 1}`);
-        el.classList.remove('wa-blur-target', 'wa-blur-image');
+        el.classList.remove('wa-blur-target', 'wa-blur-image', 'wa-hidden-row');
     });
 
     // Remove ALL inline blur styles from the entire page
