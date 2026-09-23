@@ -1,5 +1,5 @@
 /* exported addBlurStyles */
-// Blur CSS generators per blur type (standard, pixelated, blackout, invisible, custom).
+// Blur CSS generators per blur type (standard, pixelated, blackout, invisible, hide, custom).
 
 // Add blur styles with different blur types
 function addBlurStyles(blurTypeSettings = { type: 'standard' }) {
@@ -47,6 +47,8 @@ function generateBlurCSS(blurTypeSettings) {
             return generateBlackoutBlurCSS();
         case 'invisible':
             return generateInvisibleBlurCSS();
+        case 'hide':
+            return generateHideBlurCSS();
         case 'custom':
             return generateCustomBlurCSS(blurTypeSettings);
         default:
@@ -305,6 +307,20 @@ function generateInvisibleBlurCSS() {
             pointer-events: none !important;
             box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
             opacity: 1 !important;
+        }
+    `;
+}
+
+function generateHideBlurCSS() {
+    return `
+        .wa-blur-target,
+        .wa-blur-image {
+            display: none !important;
+        }
+        /* Collapse the whole chat row that contains hidden content */
+        div[role="listitem"]:has(.wa-blur-target),
+        div[role="listitem"]:has(.wa-blur-image) {
+            display: none !important;
         }
     `;
 }

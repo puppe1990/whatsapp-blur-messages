@@ -151,6 +151,28 @@ describe('blur lifecycle', () => {
     });
 });
 
+describe('hide mode', () => {
+    it('generates CSS that removes marked content and its chat row', () => {
+        const css = evaluateInPage("generateBlurCSS({ type: 'hide' })");
+
+        expect(css).toContain('display: none !important');
+        expect(css).toContain('div[role="listitem"]:has(.wa-blur-target)');
+    });
+
+    it('applies hide styles through the message API', () => {
+        document.body.innerHTML = CHAT_FIXTURE;
+
+        sendContentMessage(chromeMock, {
+            action: 'applyBlur',
+            contactName: 'Romeu Junior',
+            blurSettings: ALL_BLUR_SETTINGS,
+            blurTypeSettings: { type: 'hide' }
+        });
+
+        expect(document.getElementById('wa-blur-style')?.textContent).toContain('display: none !important');
+    });
+});
+
 describe('isInTargetChat', () => {
     it('matches the open conversation ignoring case and accents', () => {
         document.body.innerHTML = '<header><span title="João Silva">João Silva</span></header>';
