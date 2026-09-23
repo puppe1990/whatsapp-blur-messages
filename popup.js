@@ -50,7 +50,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const overlayOpacity = document.getElementById('overlayOpacity');
     const overlayOpacityValue = document.getElementById('overlayOpacityValue');
 
-    // Load saved settings
+    // Load saved settings (users are migrated from sync once)
+    migrateUsersFromSync();
     loadSettings();
     loadUsersList();
 
@@ -528,9 +529,35 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById(`${tabName}-tab`).classList.add('active');
     }
 
+    // The contact list lives in chrome.storage.local: chrome.storage.sync caps
+    // items at 8 KB, which silently dropped large contact lists.
+    function getStoredUsers(callback) {
+        chrome.storage.local.get(['managedUsers'], function (result) {
+            callback({ managedUsers: result.managedUsers || [] });
+        });
+    }
+
+    function migrateUsersFromSync() {
+        chrome.storage.local.get(['managedUsers'], function (localResult) {
+            if (localResult.managedUsers) {
+                return;
+            }
+
+            chrome.storage.sync.get(['managedUsers'], function (syncResult) {
+                if (!syncResult.managedUsers) {
+                    return;
+                }
+
+                chrome.storage.local.set({ managedUsers: syncResult.managedUsers }, function () {
+                    chrome.storage.sync.remove(['managedUsers']);
+                });
+            });
+        });
+    }
+
     // Load users list from storage
     function loadUsersList() {
-        chrome.storage.sync.get(['managedUsers'], function (result) {
+        getStoredUsers(function (result) {
             const users = result.managedUsers || [];
             displayUsersList(users);
         });
@@ -676,9 +703,9 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Save users list to storage
+    // Save users list to storage (local: long lists do not fit in sync)
     function saveUsersList(users) {
-        chrome.storage.sync.set({ managedUsers: users });
+        chrome.storage.local.set({ managedUsers: users });
     }
 
     // Blur all users
@@ -686,7 +713,7 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log('🔒 Popup: blurAllUsers function called');
         const startTime = performance.now();
 
-        chrome.storage.sync.get(['managedUsers'], function (result) {
+        getStoredUsers(function (result) {
             const users = result.managedUsers || [];
             console.log('📊 Popup: Retrieved users from storage:', users);
 
@@ -810,7 +837,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Unblur all users
     function unblurAllUsers() {
-        chrome.storage.sync.get(['managedUsers'], function (result) {
+        getStoredUsers(function (result) {
             const users = result.managedUsers || [];
 
             if (users.length === 0) {
@@ -879,7 +906,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Clear all users
     function clearAllUsers() {
         if (confirm('Are you sure you want to remove all users from the list?')) {
-            chrome.storage.sync.remove(['managedUsers']);
+            chrome.storage.local.remove(['managedUsers']);
             displayUsersList([]);
             showStatus('All users removed', 'success');
 
@@ -899,7 +926,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function toggleUserBlur(userName) {
         console.log('Toggle blur called for user:', userName);
 
-        chrome.storage.sync.get(['managedUsers'], function (result) {
+        getStoredUsers(function (result) {
             const users = result.managedUsers || [];
             const userIndex = users.findIndex((user) => user.name === userName);
 
@@ -958,7 +985,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Open user settings modal
     function openUserSettings(userName) {
-        chrome.storage.sync.get(['managedUsers'], function (result) {
+        getStoredUsers(function (result) {
             const users = result.managedUsers || [];
             const user = users.find((u) => u.name === userName);
 
@@ -1044,7 +1071,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const blurTypeSettings = { type: blurType };
 
-        chrome.storage.sync.get(['managedUsers'], function (result) {
+        getStoredUsers(function (result) {
             const users = result.managedUsers || [];
             const userIndex = users.findIndex((u) => u.name === userName);
 
@@ -1077,7 +1104,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Remove a specific user
     function removeUser(userName) {
         if (confirm(`Remove ${userName} from the list?`)) {
-            chrome.storage.sync.get(['managedUsers'], function (result) {
+            getStoredUsers(function (result) {
                 const users = result.managedUsers || [];
                 const filteredUsers = users.filter((user) => user.name !== userName);
                 saveUsersList(filteredUsers);
@@ -1128,7 +1155,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function filterAndDisplayUsers(searchTerm) {
-        chrome.storage.sync.get(['managedUsers'], function (result) {
+        getStoredUsers(function (result) {
             const users = result.managedUsers || [];
 
             if (searchTerm === '') {

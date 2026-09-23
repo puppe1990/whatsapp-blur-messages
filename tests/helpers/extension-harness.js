@@ -66,9 +66,24 @@ function createEvent(name, listeners) {
     };
 }
 
-export function createChromeMock(initialStorage = {}) {
+function createStorageArea(backing) {
+    return {
+        get: vi.fn((keys, callback) => callback({ ...backing })),
+        set: vi.fn((values, callback) => {
+            Object.assign(backing, values);
+            if (callback) callback();
+        }),
+        remove: vi.fn((keys, callback) => {
+            (Array.isArray(keys) ? keys : [keys]).forEach((key) => delete backing[key]);
+            if (callback) callback();
+        })
+    };
+}
+
+export function createChromeMock(initialSyncStorage = {}, initialLocalStorage = {}) {
     const listeners = {};
-    const storage = { ...initialStorage };
+    const storage = { ...initialSyncStorage };
+    const local = { ...initialLocalStorage };
 
     return {
         chrome: {
@@ -78,17 +93,8 @@ export function createChromeMock(initialStorage = {}) {
                 lastError: null
             },
             storage: {
-                sync: {
-                    get: vi.fn((keys, callback) => callback({ ...storage })),
-                    set: vi.fn((values, callback) => {
-                        Object.assign(storage, values);
-                        if (callback) callback();
-                    }),
-                    remove: vi.fn((keys, callback) => {
-                        (Array.isArray(keys) ? keys : [keys]).forEach((key) => delete storage[key]);
-                        if (callback) callback();
-                    })
-                }
+                sync: createStorageArea(storage),
+                local: createStorageArea(local)
             },
             contextMenus: {
                 create: vi.fn(),
@@ -105,7 +111,8 @@ export function createChromeMock(initialStorage = {}) {
             }
         },
         listeners,
-        storage
+        storage,
+        local
     };
 }
 

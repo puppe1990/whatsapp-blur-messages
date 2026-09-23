@@ -8,24 +8,24 @@ const WHATSAPP_TAB = { id: 7, url: 'https://web.whatsapp.com/' };
 const MANAGED_USERS = [{ name: 'Romeu Junior', isBlurred: false }];
 
 let chromeMock;
+let migratedUserNames = [];
 
 beforeAll(() => {
     setupBrowserEnvironment(readFileSync(join(ROOT_DIR, 'popup.html'), 'utf8'));
-    chromeMock = createChromeMock();
+    // Seed the old sync location so popup startup exercises the migration
+    chromeMock = createChromeMock({ managedUsers: MANAGED_USERS });
     globalThis.chrome = chromeMock.chrome;
-    // Rendered during popup startup so the stored users list exists for the tests
-    chromeMock.chrome.storage.sync.get.mockImplementation((keys, callback) =>
-        callback({ managedUsers: MANAGED_USERS })
-    );
 
     vm.runInThisContext(readFileSync(join(ROOT_DIR, 'popup.js'), 'utf8'), { filename: 'popup.js' });
     document.dispatchEvent(new Event('DOMContentLoaded'));
+    migratedUserNames = (chromeMock.local.managedUsers || []).map((user) => user.name);
 });
 
 beforeEach(() => {
     vi.clearAllMocks();
-    chromeMock.chrome.storage.sync.get.mockImplementation((keys, callback) =>
-        callback({ managedUsers: MANAGED_USERS })
+    // Fresh copies: the popup mutates the list it reads
+    chromeMock.chrome.storage.local.get.mockImplementation((keys, callback) =>
+        callback({ managedUsers: MANAGED_USERS.map((user) => ({ ...user })) })
     );
     chromeMock.chrome.tabs.query.mockImplementation((query, callback) => callback([WHATSAPP_TAB]));
     chromeMock.chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
@@ -57,7 +57,7 @@ describe('popup bulk actions', () => {
 
     it('keeps a user specific blur type over the selected one', () => {
         selectBlurType('hide');
-        chromeMock.chrome.storage.sync.get.mockImplementation((keys, callback) =>
+        chromeMock.chrome.storage.local.get.mockImplementation((keys, callback) =>
             callback({
                 managedUsers: [{ name: 'Romeu Junior', isBlurred: false, blurTypeSettings: { type: 'blackout' } }]
             })
@@ -79,10 +79,26 @@ describe('popup bulk actions', () => {
 
         document.getElementById('blurAllUsersBtn').click();
 
-        expect(chromeMock.chrome.storage.sync.set).toHaveBeenCalledWith(
+        expect(chromeMock.chrome.storage.local.set).toHaveBeenCalledWith(
             expect.objectContaining({
                 managedUsers: [expect.objectContaining({ isBlurred: true, blurTypeSettings: { type: 'hide' } })]
             })
+        );
+    });
+});
+
+describe('contact list storage', () => {
+    it('migrates the list from chrome.storage.sync to local once', () => {
+        expect(migratedUserNames).toEqual(['Romeu Junior']);
+        expect(chromeMock.storage.managedUsers).toBeUndefined();
+    });
+
+    it('keeps the list in local storage when toggling a user', () => {
+        document.querySelector('.user-toggle').click();
+
+        expect(chromeMock.chrome.storage.local.set).toHaveBeenCalled();
+        expect(chromeMock.chrome.storage.sync.set).not.toHaveBeenCalledWith(
+            expect.objectContaining({ managedUsers: expect.anything() })
         );
     });
 });

@@ -156,9 +156,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Keep message channel open for async response
 });
 
-// Auto-apply blur when page loads if settings exist
-chrome.storage.sync.get(['contactName', 'blurSettings', 'isEnabled', 'managedUsers'], function (result) {
-    // Load managed users
+// Auto-apply hide/blur when the page loads. The contact list lives in
+// chrome.storage.local: sync caps items at 8 KB, which silently dropped it.
+chrome.storage.local.get(['managedUsers'], function (result) {
     if (result.managedUsers && result.managedUsers.length > 0) {
         result.managedUsers.forEach((user) => {
             if (user.isBlurred) {
@@ -176,8 +176,10 @@ chrome.storage.sync.get(['contactName', 'blurSettings', 'isEnabled', 'managedUse
             setupBlurObserver();
         }, 2000);
     }
+});
 
-    // Legacy support for single user
+// Legacy support for the single-contact settings (kept in sync storage)
+chrome.storage.sync.get(['contactName', 'blurSettings', 'isEnabled'], function (result) {
     if (result.isEnabled && result.contactName && result.blurSettings) {
         setTimeout(() => {
             const blurTypeSettings = result.blurTypeSettings || { type: 'standard' };
