@@ -1,55 +1,55 @@
 # Repository Guidelines
 
-## Project Structure & Modules
+## Commands
 
-- `manifest.json`: Chrome extension config (MV3).
-- `content.js`: Injected into `web.whatsapp.com`; applies/removes blur, scans users.
-- `background.js`: Service worker; context menu and messaging glue.
-- `popup.html` / `popup.css` / `popup.js`: Popup UI, tabs, bulk actions, blur type settings.
-- `test.html` / `test.js`: Local manual test page (no framework).
-- `tests/`: Vitest + jsdom automated tests (content script messaging, background handlers, manifest/CSP checks).
-- Assets: `icon16.png`, `icon48.png`, `icon128.png`, `logo.svg`.
-- Legacy reference: `whatsapp-blur-final.js` (keep for context; do not ship new logic here).
+- Setup (clean checkout): `NODE_ENV=development npm install` (dev tooling only; the extension itself has no build step).
+- Test: `npm test` (Vitest + jsdom, headless).
+- Lint: `npm run lint` (autofix: `npm run lint:fix`).
+- Format: `npm run format` (verify: `npm run format:check`).
+- Typecheck: none (plain JavaScript).
+- Load/reload: `chrome://extensions/` → Developer Mode → Load unpacked; click Reload after edits.
+- Manual page: open `test.html` directly (or `python3 -m http.server`) and use its buttons.
+- Target site: validate on `https://web.whatsapp.com/` with popup actions and context menu.
 
-## Build, Test, and Development
+## Structure
 
-- Build: No build step for the extension itself. Load unpacked folder via `chrome://extensions/` → Enable Developer Mode → Load unpacked.
-- Dev tooling: `npm install` installs ESLint, Prettier, Vitest, husky and lint-staged (dev-only; nothing from `node_modules/` ships with the extension).
-- Checks: `npm run lint`, `npm run format:check`, `npm test` (use `npm run format` to auto-format).
-- Hooks: the husky pre-commit hook runs ESLint + Prettier on staged files and the full test suite.
-- CI: `.github/workflows/ci.yml` runs lint, format check and tests on every push/PR.
-- Reload: After edits, click the extension’s Reload in `chrome://extensions/`.
-- Local test page: Open `test.html` directly in your browser (or `python3 -m http.server` and visit the file). Use the buttons to simulate blur/clear.
-- Target site: Validate on `https://web.whatsapp.com/` with the popup actions and context menu.
+- `manifest.json`: MV3 config; content scripts run in the order listed.
+- `content.js`: injected into `web.whatsapp.com`; blur engine, user scanner and WPP export extractor (~2900 lines — over budget; split by responsibility before adding logic).
+- `background.js`: service worker; context menu and storage defaults.
+- `popup.html` / `popup.css` / `popup.js`: popup UI, tabs, bulk actions (~1200 lines — over budget; split before adding logic).
+- `test.html` / `test.js`: local manual test page.
+- `tests/`: Vitest + jsdom tests mirroring the content script message API, background handlers and manifest/CSP invariants.
+- Legacy dumps: `whatsapp-blur-*.js` — ignored by lint/format; never ship new logic there.
 
-## Coding Style & Naming
+## Conventions
 
-- JavaScript: 4‑space indent, semicolons, `const`/`let`, arrow functions where suitable.
+- JavaScript: 4‑space indent, single quotes, semicolons — enforced by Prettier.
 - Naming: camelCase for vars/functions; PascalCase only for classes/components.
-- Strings: Prefer single quotes; match surrounding file if mixed.
-- DOM/CSS: Add/remove classes instead of inline styles where possible.
-- Keep console logs informative; remove noisy debugging before merging.
+- DOM/CSS: toggle classes instead of inline styles where possible; keep injected CSS in a `<style>` with a stable id and clean it up on clear.
 
-## Testing Guidelines
+## Rules
 
-- Automated tests: Vitest + jsdom in `tests/` (`npm test`). They drive `content.js` through its message API (`ping`, `scanUsers`, `applyBlur`, `toggleBlur`, `clearBlur`, `toggleUserBlur`, …) and validate `background.js` handlers plus `manifest.json`/CSP invariants. Add or update tests when touching message handling or the manifest.
-- Manual tests (still required for UI behavior). Cover:
-    - Popup flows (Settings, Manage Users, bulk blur/unblur).
-    - Content script effects across navigation and dynamic loads.
-    - Permissions and CSP: no inline scripts, no `eval` (also asserted in `tests/manifest.test.js`).
-- Regressions: Verify previously blurred elements re‑apply after page changes.
+- Files stay under 500 lines; functions under ~20 lines, one job each.
+- Names must be grep-unique; no `Manager`/`Service`/`util` dumping grounds.
+- Max 2 levels of control flow nesting; prefer early returns.
+- Keep WHY comments and provenance; delete only obvious noise.
+- Errors and logs carry the offending value; remove noisy debugging before merging.
+- Respect WhatsApp DOM changes: resilient selectors plus `MutationObserver`.
+
+## Testing
+
+- New behavior requires a new test; every bugfix requires a regression test.
+- `npm test` must pass on a clean checkout. Pre-commit (husky) runs staged lint/format plus the full suite; CI runs lint, format check and tests on every push/PR.
+- Manual tests still required for UI behavior: popup flows, content script across navigation/dynamic loads, no inline scripts / no `eval` (also asserted in `tests/manifest.test.js`).
+- Regressions: previously blurred elements must re‑apply after page changes.
 
 ## Commit & PR Guidelines
 
-- Commits: Imperative mood, concise summary (“Add…”, “Fix…”, “Refactor…”). Add context in body when needed.
-- PRs must include:
-    - Clear description, rationale, and testing steps.
-    - Screenshots/GIFs for UI changes (popup, context menu).
-    - Notes on `manifest.json` changes and required permissions.
-    - Risk/impact and manual validation evidence.
+- Commits: imperative mood, concise summary (“Add…”, “Fix…”, “Refactor…”); add context in the body when needed.
+- PRs include description/rationale, testing steps, screenshots for UI changes, `manifest.json`/permission notes and risk/impact.
 
-## Security & Config Tips
+## Boundaries
 
+- Ask before: changing `manifest.json` permissions, touching CI/CD, force-pushing, publishing.
+- Do not edit: `whatsapp-blur-*.js` legacy dumps, `node_modules/`, lockfiles by hand.
 - Limit permissions to what’s required (`activeTab`, `storage`, `contextMenus`).
-- Respect WhatsApp DOM changes; use resilient selectors and `MutationObserver`.
-- Keep content script CSS in injected `<style>` with a stable id; clean up on clear.
