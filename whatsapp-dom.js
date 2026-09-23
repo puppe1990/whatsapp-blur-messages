@@ -1,4 +1,4 @@
-/* exported NAVIGATION_EXCLUSIONS, isInTargetChat */
+/* exported NAVIGATION_EXCLUSIONS, findConversationHeader, isInTargetChat, isNavigationChrome */
 // WhatsApp DOM helpers: chat-context detection and navigation-element exclusions.
 
 // Navigation chrome of WhatsApp that must never be treated as a contact or blurred.
@@ -8,8 +8,31 @@ const NAVIGATION_EXCLUSIONS = [
     'status-refreshed',
     'newsletter-outline',
     'community-refreshed-32',
-    'settings-refreshed'
+    'settings-refreshed',
+    'plus-rounded',
+    'wa-wordmark'
 ];
+
+// WhatsApp renders icons as text ligatures ("wds-ic-status", "ic-call"). They are
+// short single words, so the scanner would otherwise treat them as contact names.
+const ICON_LIGATURE_PATTERN = /^(wds-)?ic-[a-z0-9-]*$/;
+
+function isNavigationChrome(value) {
+    if (!value) return false;
+
+    const text = value.trim();
+    return NAVIGATION_EXCLUSIONS.includes(text) || ICON_LIGATURE_PATTERN.test(text);
+}
+
+// The conversation header holds the open chat; the first <header> in the DOM is
+// usually the left navigation rail, so prefer a header that contains a span[title].
+function findConversationHeader() {
+    const conversationHeader = document.querySelector('[data-testid="conversation-header"]');
+    if (conversationHeader) return conversationHeader;
+
+    const headers = Array.from(document.querySelectorAll('header'));
+    return headers.find((header) => header.querySelector('span[title]')) || headers[0] || null;
+}
 
 // Check if we're currently in the target chat
 function isInTargetChat(contactName) {

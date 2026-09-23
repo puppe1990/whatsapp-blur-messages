@@ -151,6 +151,49 @@ describe('blur lifecycle', () => {
     });
 });
 
+const WHATSAPP_CHROME_FIXTURE = `
+    <header id="nav-rail">
+        <h2>wa-wordmark</h2>
+        <button aria-label="Conversas">wds-ic-chat-filled</button>
+        <button aria-label="Status">wds-ic-status</button>
+        <button><span>Favoritas</span></button>
+        <button>plus-rounded</button>
+    </header>
+    <div id="pane-side">
+        <div role="listitem">
+            <span title="Romeu Junior">Romeu Junior</span>
+            <span>Mensagem de prévia</span>
+        </div>
+    </div>
+    <header id="conversation-header">
+        <span title="Romeu Junior">Romeu Junior</span>
+        <button aria-label="Pesquisar">ic-search</button>
+    </header>
+`;
+
+describe('scanning against current WhatsApp chrome', () => {
+    it('ignores icon ligatures, rail buttons and chat filters', () => {
+        document.body.innerHTML = WHATSAPP_CHROME_FIXTURE;
+
+        const response = sendContentMessage(chromeMock, { action: 'scanUsers' });
+
+        expect(response.users.map((user) => user.name)).toEqual(['Romeu Junior']);
+    });
+
+    it('identifies navigation chrome values', () => {
+        expect(evaluateInPage("isNavigationChrome('wds-ic-chat-filled')")).toBe(true);
+        expect(evaluateInPage("isNavigationChrome('ic-call')")).toBe(true);
+        expect(evaluateInPage("isNavigationChrome('wa-wordmark')")).toBe(true);
+        expect(evaluateInPage("isNavigationChrome('Romeu Junior')")).toBe(false);
+    });
+
+    it('prefers the conversation header over the nav rail', () => {
+        document.body.innerHTML = WHATSAPP_CHROME_FIXTURE;
+
+        expect(evaluateInPage('findConversationHeader().id')).toBe('conversation-header');
+    });
+});
+
 describe('hide mode', () => {
     it('generates CSS that removes marked content and its chat row', () => {
         const css = evaluateInPage("generateBlurCSS({ type: 'hide' })");

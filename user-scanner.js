@@ -1,5 +1,5 @@
 /* exported scanForUsers, toggleUserBlur, removeUserBlur */
-/* global NAVIGATION_EXCLUSIONS, blurContact, isInTargetChat, setupBlurObserver */
+/* global NAVIGATION_EXCLUSIONS, blurContact, findConversationHeader, isInTargetChat, isNavigationChrome, setupBlurObserver */
 // Scan visible users and toggle/remove blur for a single user.
 
 // Scan for users currently visible on the page
@@ -9,19 +9,16 @@ function scanForUsers() {
 
     // Function to check if an element should be excluded from user scanning
     function shouldExcludeFromScan(element) {
-        // Exclude navigation elements by data-testid
-        const testId = element.getAttribute('data-testid');
-        if (testId && NAVIGATION_EXCLUSIONS.includes(testId)) {
+        // Navigation icons and labels (data-testid, title, text or ligature like "ic-call")
+        if (
+            isNavigationChrome(element.getAttribute('data-testid')) ||
+            isNavigationChrome(element.getAttribute('title')) ||
+            isNavigationChrome(element.textContent)
+        ) {
             return true;
         }
 
-        // Exclude navigation elements by title attribute
-        const title = element.getAttribute('title');
-        if (title && NAVIGATION_EXCLUSIONS.includes(title.trim())) {
-            return true;
-        }
-
-        // Exclude navigation elements by class names that might contain these identifiers
+        // Navigation elements can also carry the identifiers in their class names
         const className = element.className;
         if (className && typeof className === 'string') {
             for (let identifier of NAVIGATION_EXCLUSIONS) {
@@ -31,22 +28,14 @@ function scanForUsers() {
             }
         }
 
-        // Exclude navigation elements by text content
-        const textContent = element.textContent && element.textContent.trim();
-        if (textContent && NAVIGATION_EXCLUSIONS.includes(textContent)) {
+        // WhatsApp renders its chrome as buttons and links (nav rail, chat filters,
+        // composer); contact rows are plain divs, so their contents are never contacts.
+        if (element.closest('button, a')) {
             return true;
         }
 
-        // Exclude elements that are likely navigation buttons/icons
-        if (element.tagName === 'BUTTON' || element.tagName === 'A') {
-            // Check if it's in a navigation area
-            const navParent = element.closest('nav, [role="navigation"], [data-testid*="nav"]');
-            if (navParent) {
-                return true;
-            }
-        }
-
         // Exclude single character text content (likely navigation icons)
+        const textContent = element.textContent && element.textContent.trim();
         if (textContent && textContent.length === 1) {
             return true;
         }
@@ -60,7 +49,7 @@ function scanForUsers() {
         const title = span.getAttribute('title');
         if (title && title.trim() && !seenNames.has(title.trim()) && !shouldExcludeFromScan(span)) {
             // Exclude navigation elements by their title attribute
-            if (NAVIGATION_EXCLUSIONS.includes(title.trim())) {
+            if (isNavigationChrome(title)) {
                 return; // Skip this element
             }
 
@@ -81,14 +70,14 @@ function scanForUsers() {
     });
 
     // Also look for names in the current chat header
-    const header = document.querySelector('header');
+    const header = findConversationHeader();
     if (header) {
         const headerElements = header.querySelectorAll('*');
         headerElements.forEach((el) => {
             const text = el.textContent && el.textContent.trim();
             if (text && text.length > 0 && text.length < 50 && !seenNames.has(text) && !shouldExcludeFromScan(el)) {
                 // Exclude navigation elements by their text content
-                if (NAVIGATION_EXCLUSIONS.includes(text)) {
+                if (isNavigationChrome(text)) {
                     return; // Skip this element
                 }
 
