@@ -119,6 +119,10 @@ function startBlurMonitoring() {
         const blurredElements = document.querySelectorAll('.wa-blur-target, .wa-blur-image');
         blurredElements.forEach((el) => {
             const computedStyle = window.getComputedStyle(el);
+
+            // Hide mode removes elements from the page; no blur to reapply.
+            if (computedStyle.display === 'none') return;
+
             if (
                 computedStyle.filter === 'none' ||
                 computedStyle.filter.includes('blur(0px)') ||

@@ -306,6 +306,9 @@ function blurContact(contactName, blurSettings, blurTypeSettings = { type: 'stan
 
     // Force style application and verify
     setTimeout(() => {
+        // Hide mode relies on display:none; the blur fallback must not fight it.
+        if (blurTypeSettings.type === 'hide') return;
+
         const blurredElements = document.querySelectorAll('.wa-blur-target, .wa-blur-image');
         console.log(`🔍 Verification: Found ${blurredElements.length} blurred elements`);
 

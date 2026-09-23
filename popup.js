@@ -969,6 +969,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <option value="pixelated" ${user.blurTypeSettings?.type === 'pixelated' ? 'selected' : ''}>Pixelated</option>
                                 <option value="blackout" ${user.blurTypeSettings?.type === 'blackout' ? 'selected' : ''}>Blackout</option>
                                 <option value="invisible" ${user.blurTypeSettings?.type === 'invisible' ? 'selected' : ''}>Invisible</option>
+                                <option value="hide" ${user.blurTypeSettings?.type === 'hide' ? 'selected' : ''}>Hide</option>
                                 <option value="custom" ${user.blurTypeSettings?.type === 'custom' ? 'selected' : ''}>Custom</option>
                             </select>
                         </div>
