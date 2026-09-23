@@ -27,7 +27,21 @@ const WINDOW_GLOBALS = [
     'MouseEvent'
 ];
 
+let consoleSilenced = false;
+
+function silenceConsole() {
+    if (consoleSilenced) return;
+    consoleSilenced = true;
+
+    // The extension logs heavily; keep test output readable.
+    ['log', 'info', 'warn', 'error', 'debug'].forEach((method) => {
+        vi.spyOn(console, method).mockImplementation(() => {});
+    });
+}
+
 export function setupBrowserEnvironment() {
+    silenceConsole();
+
     const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', {
         url: 'https://web.whatsapp.com/',
         pretendToBeVisual: true
@@ -96,6 +110,8 @@ export function createChromeMock(initialStorage = {}) {
 }
 
 export function loadExtensionScript(relativePath, chromeMock) {
+    silenceConsole();
+
     const source = readFileSync(join(ROOT_DIR, relativePath), 'utf8');
     globalThis.chrome = chromeMock;
     vm.runInThisContext(source, { filename: relativePath });
