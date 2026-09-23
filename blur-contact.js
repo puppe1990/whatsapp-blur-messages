@@ -1,5 +1,5 @@
 /* exported blurContact */
-/* global NAVIGATION_EXCLUSIONS, addBlurStyles, isInTargetChat */
+/* global NAVIGATION_EXCLUSIONS, addBlurStyles, isInTargetChat, isNavigationChrome */
 // Per-contact blur application across chat list, header and messages.
 
 // Enhanced blur function that works with multiple users
@@ -47,9 +47,8 @@ function blurContact(contactName, blurSettings, blurTypeSettings = { type: 'stan
 
     // Function to check if an element should be excluded from blurring
     function shouldExcludeElement(element) {
-        // Exclude navigation elements by data-testid
-        const testId = element.getAttribute('data-testid');
-        if (testId && NAVIGATION_EXCLUSIONS.includes(testId)) {
+        // Navigation icons and labels (data-testid, text or ligature like "ic-call")
+        if (isNavigationChrome(element.getAttribute('data-testid')) || isNavigationChrome(element.textContent)) {
             return true;
         }
 

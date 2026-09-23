@@ -17,7 +17,7 @@
 - Content scripts (injected into `web.whatsapp.com`, one shared scope, no imports):
     - `content-state.js`: shared mutable state (loaded first).
     - `blur-styles.js`: blur CSS generators per blur type.
-    - `whatsapp-dom.js`: chat-context detection and `NAVIGATION_EXCLUSIONS`.
+    - `whatsapp-dom.js`: chat-context detection and navigation-chrome exclusions (`NAVIGATION_EXCLUSIONS`, `isNavigationChrome`).
     - `blur-controller.js`: apply/toggle/clear, mutation observer, re-apply monitoring.
     - `blur-contact.js`: per-contact blur across chat list, header and messages.
     - `user-scanner.js`: scan visible users, toggle/remove blur per user.
