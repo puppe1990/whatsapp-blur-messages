@@ -57,6 +57,32 @@
             button:hover {
                 background: #1ea952;
             }
+            .bench-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 3px 6px;
+                border-bottom: 1px solid #eee;
+                font-size: 13px;
+            }
+            #benchRows {
+                max-height: 180px;
+                overflow: auto;
+                border: 1px solid #ddd;
+                border-radius: 3px;
+                background: #fff;
+                margin: 10px 0;
+            }
+            #benchResult {
+                background: #111;
+                color: #7cf07c;
+                padding: 10px;
+                border-radius: 4px;
+                font-size: 12px;
+                white-space: pre-wrap;
+                overflow: auto;
+                max-height: 260px;
+            }
         </style>
     </head>
     <body>
@@ -102,11 +128,38 @@
         </div>
 
         <div class="test-section">
+            <h2>Benchmark (real engine)</h2>
+            <p>
+                This page loads the real content scripts, so the numbers below come from the actual engine. It applies
+                blur and hide to N synthetic chats and samples frame times, getComputedStyle calls and long tasks while
+                the 500 ms re-apply monitor runs. Give the page a couple of seconds after loading before running it.
+            </p>
+            <label>Chats: <input type="number" id="benchRowCount" value="300" min="10" max="2000" /></label>
+            <div>
+                <button id="benchRunBtn">Run benchmark</button>
+                <button id="benchCleanBtn">Clean up</button>
+            </div>
+            <div id="benchRows"></div>
+            <pre id="benchResult">Not run yet.</pre>
+        </div>
+
+        <div class="test-section">
             <h2>Console Output</h2>
             <p>Check the browser console for detailed logs and any CSP violations.</p>
             <p>Expected: No CSP violations related to inline scripts or unsafe-eval.</p>
         </div>
 
+        <script src="test-chrome-stub.js"></script>
+        <script src="content-state.js"></script>
+        <script src="blur-styles.js"></script>
+        <script src="whatsapp-dom.js"></script>
+        <script src="blur-controller.js"></script>
+        <script src="blur-contact.js"></script>
+        <script src="user-scanner.js"></script>
+        <script src="user-bulk-actions.js"></script>
+        <script src="wpp-export.js"></script>
+        <script src="content.js"></script>
         <script src="test.js"></script>
+        <script src="test-benchmark.js"></script>
     </body>
 </html>
