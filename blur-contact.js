@@ -1,5 +1,5 @@
 /* exported blurContact */
-/* global NAVIGATION_EXCLUSIONS, addBlurStyles, isInTargetChat, isNavigationChrome */
+/* global NAVIGATION_EXCLUSIONS, addBlurStyles, findConversationHeader, isInTargetChat, isNavigationChrome */
 // Per-contact blur application across chat list, header and messages.
 
 // Hide mode: the row wrapper (timestamp, unread badge) is not a blur target,
@@ -92,8 +92,14 @@ function blurContact(contactName, blurSettings, blurTypeSettings = { type: 'stan
         const chatSpans = document.querySelectorAll('span[title]');
         console.log(`🔍 Found ${chatSpans.length} chat spans to check`);
 
+        const conversationHeader = findConversationHeader();
         chatSpans.forEach((span, index) => {
-            if (span.getAttribute('title') === contactName && !shouldExcludeElement(span)) {
+            // The open conversation has its own pass (header/messages); this one is list-only.
+            if (
+                span.getAttribute('title') === contactName &&
+                !shouldExcludeElement(span) &&
+                !(conversationHeader && conversationHeader.contains(span))
+            ) {
                 console.log(`✅ Found matching span for "${contactName}" at index ${index}`);
 
                 if (blurTypeSettings.type === 'hide') {
@@ -164,8 +170,10 @@ function blurContact(contactName, blurSettings, blurTypeSettings = { type: 'stan
         });
     }
 
-    // 2. Only blur header and messages if we're actually in the target chat
-    if (isInTargetChat(contactName)) {
+    // 2. Only blur header and messages if we're actually in the target chat.
+    // Hide mode stays list-only: hiding the open conversation leaves a blank
+    // pane and leaks marks into whatever chat is shown next.
+    if (blurTypeSettings.type !== 'hide' && isInTargetChat(contactName)) {
         console.log(`🏠 In target chat for "${contactName}", processing header and messages`);
         const header = document.querySelector('header');
         if (header) {

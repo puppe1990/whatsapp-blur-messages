@@ -298,6 +298,64 @@ describe('hide mode', () => {
 
         expect(document.querySelector('.wa-hidden-row')).toBeNull();
     });
+
+    it('leaves the open conversation untouched', () => {
+        document.body.innerHTML = MESSAGE_MEDIA_FIXTURE;
+
+        sendContentMessage(chromeMock, {
+            action: 'applyBlur',
+            contactName: 'Romeu Junior',
+            blurSettings: ALL_BLUR_SETTINGS,
+            blurTypeSettings: { type: 'hide' }
+        });
+
+        const panel = '[data-testid="conversation-panel-messages"]';
+        expect(document.querySelectorAll(`${panel} .wa-blur-target`)).toHaveLength(0);
+        expect(document.querySelector('header span[title]').classList.contains('wa-blur-target')).toBe(false);
+        expect(document.querySelector('video').classList.contains('wa-blur-image')).toBe(false);
+        expect(document.querySelector('iframe').classList.contains('wa-blur-image')).toBe(false);
+    });
+});
+
+describe('chat mark reconciliation', () => {
+    it('un-hides rows recycled for another chat', () => {
+        document.body.innerHTML = `
+            <div role="listitem" class="wa-hidden-row" data-wa-blur-user="Romeu Junior">
+                <span title="Ana Souza">Ana Souza</span>
+            </div>
+        `;
+
+        evaluateInPage('reconcileChatMarks()');
+
+        expect(document.querySelector('.wa-hidden-row')).toBeNull();
+    });
+
+    it('keeps marks that still hold their own contact', () => {
+        document.body.innerHTML = `
+            <div role="listitem" class="wa-hidden-row" data-wa-blur-user="Romeu Junior">
+                <span title="Romeu Junior">Romeu Junior</span>
+            </div>
+        `;
+
+        evaluateInPage('reconcileChatMarks()');
+
+        expect(document.querySelector('.wa-hidden-row')).not.toBeNull();
+    });
+
+    it('releases conversation marks from another chat', () => {
+        document.body.innerHTML = `
+            <header><span title="Ana Souza">Ana Souza</span></header>
+            <div data-testid="conversation-panel-messages">
+                <div class="message-in">
+                    <span class="wa-blur-target" data-wa-blur-user="Romeu Junior">Oi</span>
+                </div>
+            </div>
+        `;
+
+        evaluateInPage('reconcileChatMarks()');
+
+        expect(document.querySelectorAll('.wa-blur-target')).toHaveLength(0);
+    });
 });
 
 describe('isInTargetChat', () => {
