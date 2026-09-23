@@ -537,6 +537,26 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // The chat list is virtualised: a scan only sees the rendered slice, so
+    // merge instead of overwriting — every known contact keeps its hide/show
+    // preference and the newly discovered ones are appended.
+    function mergeScannedUsers(storedUsers, scannedUsers) {
+        const knownNames = new Set(storedUsers.map((user) => user.name.trim()));
+        const mergedUsers = storedUsers.map((user) => ({ ...user }));
+
+        for (const user of scannedUsers) {
+            const name = (user.name || '').trim();
+            if (!name || knownNames.has(name)) {
+                continue;
+            }
+
+            knownNames.add(name);
+            mergedUsers.push({ ...user, name, isBlurred: false });
+        }
+
+        return mergedUsers;
+    }
+
     function migrateUsersFromSync() {
         chrome.storage.local.get(['managedUsers'], function (localResult) {
             if (localResult.managedUsers) {
@@ -689,10 +709,17 @@ document.addEventListener('DOMContentLoaded', function () {
                             if (chrome.runtime.lastError) {
                                 showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
                             } else if (response && response.success) {
-                                const users = response.users || [];
-                                saveUsersList(users);
-                                displayUsersList(users);
-                                showStatus(`Found ${users.length} users`, 'success');
+                                const scannedUsers = response.users || [];
+
+                                getStoredUsers(function (result) {
+                                    const mergedUsers = mergeScannedUsers(result.managedUsers, scannedUsers);
+                                    saveUsersList(mergedUsers);
+                                    displayUsersList(mergedUsers);
+                                    showStatus(
+                                        `Found ${scannedUsers.length} users (${mergedUsers.length} saved)`,
+                                        'success'
+                                    );
+                                });
                             } else {
                                 showStatus('Failed to scan for users', 'error');
                             }
