@@ -8,10 +8,10 @@ A Chrome extension that allows you to blur messages from specific WhatsApp conta
 - 👥 **NEW: Multi-user management** - Manage blur settings for multiple users at once
 - 🔍 **NEW: Auto-scan users** - Automatically detect all users visible on WhatsApp Web
 - 🎛️ Granular control over what gets blurred:
-  - Chat list name and message preview
-  - Chat list avatar
-  - Header name and avatar
-  - Message text and images
+    - Chat list name and message preview
+    - Chat list avatar
+    - Header name and avatar
+    - Message text and images
 - 🎨 Beautiful, modern UI with tabbed interface
 - 💾 Settings are saved and persist across sessions
 - 🔄 Auto-reapplies blur when navigating WhatsApp Web
@@ -28,6 +28,7 @@ A Chrome extension that allows you to blur messages from specific WhatsApp conta
 ## Usage
 
 ### Settings Tab (Original Functionality)
+
 1. **Open WhatsApp Web** in your browser
 2. **Click the extension icon** in your toolbar
 3. **Enter the contact name** you want to blur (exactly as it appears in WhatsApp)
@@ -35,6 +36,7 @@ A Chrome extension that allows you to blur messages from specific WhatsApp conta
 5. **Click "Apply Blur"** to start blurring
 
 ### Manage Users Tab (NEW)
+
 1. **Click the "Manage Users" tab** in the extension popup
 2. **Click "Scan for Users"** to automatically detect all users currently visible on WhatsApp Web
 3. **Toggle blur on/off** for individual users using the toggle switches
@@ -72,12 +74,14 @@ The extension injects CSS blur filters into WhatsApp Web to hide content from sp
 ## Troubleshooting
 
 ### Blur not working?
+
 1. Make sure you're on WhatsApp Web (`web.whatsapp.com`)
 2. Check that the contact name matches exactly (case-sensitive)
 3. Try refreshing the page and reapplying blur
 4. Use the "Clear All" button and try again
 
 ### Extension not loading?
+
 1. Make sure Developer mode is enabled in Chrome
 2. Check the console for any error messages
 3. Try reloading the extension in `chrome://extensions/`

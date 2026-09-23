@@ -1,102 +1,112 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Blur Extension Test</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        .test-section {
-            background: #f5f5f5;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-        }
-        .success {
-            color: #25D366;
-            font-weight: bold;
-        }
-        .error {
-            color: #ff4757;
-            font-weight: bold;
-        }
-        .info {
-            color: #007bff;
-        }
-        .blur-target {
-            filter: blur(8px);
-            pointer-events: none;
-            transition: filter 0.3s ease;
-        }
-        .blur-image {
-            filter: blur(12px);
-            pointer-events: none;
-            transition: filter 0.3s ease;
-        }
-        .test-element {
-            padding: 10px;
-            margin: 5px 0;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-        }
-        button {
-            background: #25D366;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        button:hover {
-            background: #1ea952;
-        }
-    </style>
-</head>
-<body>
-    <h1>WhatsApp Blur Extension Test</h1>
-    
-    <div class="test-section">
-        <h2>Extension Status</h2>
-        <p id="status" class="info">Testing extension functionality...</p>
-    </div>
-    
-    <div class="test-section">
-        <h2>Test Elements</h2>
-        <p>These elements simulate WhatsApp content that should be blurred:</p>
-        
-        <div class="test-element">
-            <span title="Romeu Junior">Romeu Junior</span>
-            <p>This is a test message from Romeu Junior</p>
-            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiMyNUQzNjYiLz4KPHRleHQgeD0iMjAiIHk9IjI2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij5SJjwvdGV4dD4KPC9zdmc+" alt="Avatar" width="40" height="40">
-        </div>
-        
-        <div class="test-element">
-            <span title="Larissa Rodrigues">Larissa Rodrigues</span>
-            <p>Another test message from Larissa</p>
-            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNGRjQ3NTciLz4KPHRleHQgeD0iMjAiIHk9IjI2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij5MPC90ZXh0Pgo8L3N2Zz4=" alt="Avatar" width="40" height="40">
-        </div>
-    </div>
-    
-    <div class="test-section">
-        <h2>Manual Tests</h2>
-        <button id="testBlurBtn">Test Blur Function</button>
-        <button id="testClearBtn">Test Clear Function</button>
-        <button id="testToggleBtn">Test Toggle Function</button>
-    </div>
-    
-    <div class="test-section">
-        <h2>Console Output</h2>
-        <p>Check the browser console for detailed logs and any CSP violations.</p>
-        <p>Expected: No CSP violations related to inline scripts or unsafe-eval.</p>
-    </div>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>WhatsApp Blur Extension Test</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                line-height: 1.6;
+            }
+            .test-section {
+                background: #f5f5f5;
+                padding: 15px;
+                margin: 10px 0;
+                border-radius: 5px;
+            }
+            .success {
+                color: #25d366;
+                font-weight: bold;
+            }
+            .error {
+                color: #ff4757;
+                font-weight: bold;
+            }
+            .info {
+                color: #007bff;
+            }
+            .blur-target {
+                filter: blur(8px);
+                pointer-events: none;
+                transition: filter 0.3s ease;
+            }
+            .blur-image {
+                filter: blur(12px);
+                pointer-events: none;
+                transition: filter 0.3s ease;
+            }
+            .test-element {
+                padding: 10px;
+                margin: 5px 0;
+                border: 1px solid #ddd;
+                border-radius: 3px;
+            }
+            button {
+                background: #25d366;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                margin: 5px;
+            }
+            button:hover {
+                background: #1ea952;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>WhatsApp Blur Extension Test</h1>
 
-    <script src="test.js"></script>
-</body>
+        <div class="test-section">
+            <h2>Extension Status</h2>
+            <p id="status" class="info">Testing extension functionality...</p>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Elements</h2>
+            <p>These elements simulate WhatsApp content that should be blurred:</p>
+
+            <div class="test-element">
+                <span title="Romeu Junior">Romeu Junior</span>
+                <p>This is a test message from Romeu Junior</p>
+                <img
+                    src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiMyNUQzNjYiLz4KPHRleHQgeD0iMjAiIHk9IjI2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij5SJjwvdGV4dD4KPC9zdmc+"
+                    alt="Avatar"
+                    width="40"
+                    height="40"
+                />
+            </div>
+
+            <div class="test-element">
+                <span title="Larissa Rodrigues">Larissa Rodrigues</span>
+                <p>Another test message from Larissa</p>
+                <img
+                    src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNGRjQ3NTciLz4KPHRleHQgeD0iMjAiIHk9IjI2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij5MPC90ZXh0Pgo8L3N2Zz4="
+                    alt="Avatar"
+                    width="40"
+                    height="40"
+                />
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Manual Tests</h2>
+            <button id="testBlurBtn">Test Blur Function</button>
+            <button id="testClearBtn">Test Clear Function</button>
+            <button id="testToggleBtn">Test Toggle Function</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Console Output</h2>
+            <p>Check the browser console for detailed logs and any CSP violations.</p>
+            <p>Expected: No CSP violations related to inline scripts or unsafe-eval.</p>
+        </div>
+
+        <script src="test.js"></script>
+    </body>
 </html>
