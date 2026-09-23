@@ -171,6 +171,31 @@ const WHATSAPP_CHROME_FIXTURE = `
     </header>
 `;
 
+describe('bulk blur honors the selected blur type', () => {
+    it('hides users whose blur type is hide', () => {
+        document.body.innerHTML = CHAT_FIXTURE;
+
+        const response = sendContentMessage(chromeMock, {
+            action: 'blurAllUsers',
+            users: [{ name: 'Romeu Junior', isBlurred: true, blurTypeSettings: { type: 'hide' } }]
+        });
+
+        expect(response.success).toBe(true);
+        expect(document.getElementById('wa-blur-style')?.textContent).toContain('display: none !important');
+    });
+
+    it('falls back to the standard blur when a user has no settings', () => {
+        document.body.innerHTML = CHAT_FIXTURE;
+
+        sendContentMessage(chromeMock, {
+            action: 'blurAllUsers',
+            users: [{ name: 'Romeu Junior', isBlurred: true }]
+        });
+
+        expect(document.getElementById('wa-blur-style')?.textContent).toContain('blur(25px)');
+    });
+});
+
 describe('scanning against current WhatsApp chrome', () => {
     it('ignores icon ligatures, rail buttons and chat filters', () => {
         document.body.innerHTML = WHATSAPP_CHROME_FIXTURE;

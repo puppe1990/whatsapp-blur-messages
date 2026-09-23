@@ -199,6 +199,34 @@ document.addEventListener('DOMContentLoaded', function () {
         chrome.storage.sync.set(settings);
     }
 
+    function getSelectedBlurSettings() {
+        return {
+            chatListName: checkboxes.chatListName.checked,
+            chatListMessage: checkboxes.chatListMessage.checked,
+            chatListAvatar: checkboxes.chatListAvatar.checked,
+            headerName: checkboxes.headerName.checked,
+            headerAvatar: checkboxes.headerAvatar.checked,
+            messageText: checkboxes.messageText.checked,
+            messageImages: checkboxes.messageImages.checked
+        };
+    }
+
+    function getSelectedBlurTypeSettings() {
+        const selectedBlurType = document.querySelector('input[name="blurType"]:checked');
+        const blurType = selectedBlurType ? selectedBlurType.value : 'standard';
+
+        if (blurType !== 'custom') {
+            return { type: blurType };
+        }
+
+        return {
+            type: 'custom',
+            intensity: blurIntensity ? parseInt(blurIntensity.value) : 25,
+            color: overlayColor ? overlayColor.value : '#ff0000',
+            opacity: overlayOpacity ? parseFloat(overlayOpacity.value) : 0.8
+        };
+    }
+
     function handleBlurTypeChange() {
         const selectedBlurType = document.querySelector('input[name="blurType"]:checked');
         const blurType = selectedBlurType ? selectedBlurType.value : 'standard';
@@ -274,36 +302,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            // Get blur type settings
-            const selectedBlurType = document.querySelector('input[name="blurType"]:checked');
-            const blurType = selectedBlurType ? selectedBlurType.value : 'standard';
-
-            let blurTypeSettings = { type: blurType };
-            if (blurType === 'custom') {
-                blurTypeSettings = {
-                    type: 'custom',
-                    intensity: blurIntensity ? parseInt(blurIntensity.value) : 25,
-                    color: overlayColor ? overlayColor.value : '#ff0000',
-                    opacity: overlayOpacity ? parseFloat(overlayOpacity.value) : 0.8
-                };
-            }
-
-            // Send message to content script
+            // Send message to content script with the selected settings
             chrome.tabs.sendMessage(
                 currentTab.id,
                 {
                     action: 'applyBlur',
                     contactName: contactName,
-                    blurSettings: {
-                        chatListName: checkboxes.chatListName.checked,
-                        chatListMessage: checkboxes.chatListMessage.checked,
-                        chatListAvatar: checkboxes.chatListAvatar.checked,
-                        headerName: checkboxes.headerName.checked,
-                        headerAvatar: checkboxes.headerAvatar.checked,
-                        messageText: checkboxes.messageText.checked,
-                        messageImages: checkboxes.messageImages.checked
-                    },
-                    blurTypeSettings: blurTypeSettings
+                    blurSettings: getSelectedBlurSettings(),
+                    blurTypeSettings: getSelectedBlurTypeSettings()
                 },
                 function (response) {
                     if (chrome.runtime.lastError) {
@@ -697,10 +703,14 @@ document.addEventListener('DOMContentLoaded', function () {
             blurAllUsersBtn.disabled = true;
             console.log('🔄 Popup: Set loading state for blur button');
 
-            // Update all users to be blurred
+            // Per-user settings win; users without one get the selected blur type
+            const selectedBlurSettings = getSelectedBlurSettings();
+            const selectedBlurTypeSettings = getSelectedBlurTypeSettings();
             const updatedUsers = users.map((user) => ({
                 ...user,
-                isBlurred: true
+                isBlurred: true,
+                blurSettings: user.blurSettings || selectedBlurSettings,
+                blurTypeSettings: user.blurTypeSettings || selectedBlurTypeSettings
             }));
 
             console.log('✅ Popup: Updated all users to blurred state:', updatedUsers);
@@ -896,8 +906,11 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('Found user at index:', userIndex, 'Current users:', users);
 
             if (userIndex !== -1) {
-                users[userIndex].isBlurred = !users[userIndex].isBlurred;
-                console.log('Updated user blur status:', users[userIndex].isBlurred);
+                const user = users[userIndex];
+                user.isBlurred = !user.isBlurred;
+                user.blurSettings = user.blurSettings || getSelectedBlurSettings();
+                user.blurTypeSettings = user.blurTypeSettings || getSelectedBlurTypeSettings();
+                console.log('Updated user blur status:', user.isBlurred);
 
                 saveUsersList(users);
                 displayUsersList(users);
@@ -917,7 +930,9 @@ document.addEventListener('DOMContentLoaded', function () {
                             {
                                 action: 'toggleUserBlur',
                                 userName: userName,
-                                isBlurred: users[userIndex].isBlurred
+                                isBlurred: user.isBlurred,
+                                blurSettings: user.blurSettings,
+                                blurTypeSettings: user.blurTypeSettings
                             },
                             function (response) {
                                 if (chrome.runtime.lastError) {
@@ -933,7 +948,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
 
-                showStatus(`${userName} ${users[userIndex].isBlurred ? 'blurred' : 'unblurred'}`, 'success');
+                showStatus(`${userName} ${user.isBlurred ? 'blurred' : 'unblurred'}`, 'success');
             } else {
                 console.error('User not found:', userName);
                 showStatus('User not found', 'error');
