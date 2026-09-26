@@ -1,5 +1,5 @@
 /* exported scanForUsers, toggleUserBlur, removeUserBlur */
-/* global NAVIGATION_EXCLUSIONS, blurContact, findConversationHeader, isInTargetChat, isNavigationChrome, setupBlurObserver */
+/* global NAVIGATION_EXCLUSIONS, blurContact, findConversationHeader, isInTargetChat, isNavigationChrome, normalizeContactName, setupBlurObserver */
 // Scan visible users and toggle/remove blur for a single user.
 
 // Scan for users currently visible on the page
@@ -170,7 +170,7 @@ function removeUserBlur(userName) {
     // Remove blur classes for this specific user
     const chatSpans = document.querySelectorAll('span[title]');
     chatSpans.forEach((span) => {
-        if (span.getAttribute('title') === userName) {
+        if (normalizeContactName(span.getAttribute('title')) === normalizeContactName(userName)) {
             span.classList.remove('wa-blur-target');
             // Clean inline styles applied by fallbacks
             if (span.dataset && (span.dataset.waBlurInline || span.dataset.waElegant)) {
@@ -246,24 +246,16 @@ function removeUserBlur(userName) {
 
     // Decide if current open chat matches the user (robust detection)
     const headerRoot = document.querySelector('[data-testid="conversation-header"], header');
-    const norm = (s) =>
-        (s || '')
-            .normalize('NFD')
-            .replace(/\p{Diacritic}+/gu, '')
-            .replace(/[\u200B-\u200D\uFEFF]/g, '')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .toLowerCase();
     let inTarget = false;
     if (isInTargetChat(userName)) {
         inTarget = true;
     } else if (headerRoot) {
-        const target = norm(userName);
+        const target = normalizeContactName(userName);
         // Try to extract displayed chat name
         const candidates = headerRoot.querySelectorAll('span[title], div[title], h1, h2, span, div');
         for (let el of candidates) {
             const ht = el.getAttribute && el.getAttribute('title');
-            const text = norm(ht || el.textContent);
+            const text = normalizeContactName(ht || el.textContent);
             if (text && (text === target || text.includes(target) || target.includes(text))) {
                 inTarget = true;
                 break;

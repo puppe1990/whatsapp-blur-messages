@@ -371,3 +371,56 @@ describe('isInTargetChat', () => {
         expect(evaluateInPage("isInTargetChat('Romeu Junior')")).toBe(false);
     });
 });
+
+describe('bidi marks in WhatsApp titles', () => {
+    it('matches the open chat through bidi marks', () => {
+        document.body.innerHTML = '<header><span title="\u202AJoão Silva\u202C">João Silva</span></header>';
+
+        expect(evaluateInPage("isInTargetChat('joao silva')")).toBe(true);
+    });
+
+    it('blurs the chat row of a bidi wrapped title', () => {
+        document.body.innerHTML = `
+            <div id="pane-side">
+                <div role="listitem"><span title="\u202ARomeu Junior\u202C">Romeu Junior</span></div>
+            </div>
+        `;
+
+        sendContentMessage(chromeMock, {
+            action: 'applyBlur',
+            contactName: 'Romeu Junior',
+            blurSettings: ALL_BLUR_SETTINGS,
+            blurTypeSettings: { type: 'standard' }
+        });
+
+        expect(document.querySelector('div[role="listitem"] span[title]').classList.contains('wa-blur-target')).toBe(
+            true
+        );
+    });
+
+    it('unblurs a bidi wrapped row when the user is removed', () => {
+        document.body.innerHTML = `
+            <div id="pane-side">
+                <div role="listitem">
+                    <span title="\u202ARomeu Junior\u202C" class="wa-blur-target">Romeu Junior</span>
+                </div>
+            </div>
+        `;
+
+        sendContentMessage(chromeMock, { action: 'removeUserBlur', userName: 'Romeu Junior' });
+
+        expect(document.querySelector('.wa-blur-target')).toBeNull();
+    });
+
+    it('keeps marks on rows whose own contact carries bidi marks', () => {
+        document.body.innerHTML = `
+            <div role="listitem" class="wa-hidden-row" data-wa-blur-user="Romeu Junior">
+                <span title="\u202ARomeu Junior\u202C">Romeu Junior</span>
+            </div>
+        `;
+
+        evaluateInPage('reconcileChatMarks()');
+
+        expect(document.querySelector('.wa-hidden-row')).not.toBeNull();
+    });
+});

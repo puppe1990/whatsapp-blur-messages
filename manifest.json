@@ -21,9 +21,16 @@
                 "user-scanner.js",
                 "user-bulk-actions.js",
                 "wpp-export.js",
+                "notify-mute.js",
                 "content.js"
             ],
             "run_at": "document_end"
+        },
+        {
+            "matches": ["https://web.whatsapp.com/*"],
+            "js": ["page-sound-guard.js"],
+            "world": "MAIN",
+            "run_at": "document_start"
         }
     ],
     "background": {

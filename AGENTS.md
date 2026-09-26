@@ -23,7 +23,9 @@
     - `user-scanner.js`: scan visible users, toggle/remove blur per user.
     - `user-bulk-actions.js`: blur/unblur all, full style cleanup, clear list.
     - `wpp-export.js`: message extractor (~930 lines — over budget; split before adding logic).
+    - `notify-mute.js`: publishes blurred contact names and opens the mute window when one of them shows new chat-list activity.
     - `content.js`: message router and startup bootstrap (loaded last).
+- `page-sound-guard.js`: separate `content_scripts` entry with `"world": "MAIN"`, `run_at: "document_start"` (requires Chrome 111+). Content scripts cannot patch page JavaScript, so this one runs in the page context to mute WhatsApp notification sounds and suppress system notifications for blurred/hidden contacts.
 - `background.js`: service worker; context menu and storage defaults.
 - `popup.html` / `popup.css` / `popup.js`: popup UI, tabs, bulk actions (~1200 lines — over budget; split before adding logic).
 - `test.html` / `test.js`: local manual test page.
@@ -33,6 +35,8 @@
 ## Conventions
 
 - Content scripts share one scope: declare APIs a file consumes with `/* global */` and ones it provides with `/* exported */`; load order lives in `manifest.json`.
+- Compare contact names through `normalizeContactName` (`whatsapp-dom.js`): it ignores case, accents and the bidi/zero-width marks WhatsApp adds to titles.
+- Cross-world state (isolated → main) lives on `document.documentElement.dataset`: `data-wa-muted-names` (normalized blurred names, `\n` separated) and `data-wa-mute-until` (epoch ms). Change `notify-mute.js` and `page-sound-guard.js` together when touching that contract.
 - Storage: the contact list (`managedUsers`, including each contact's hide/show state) lives in `chrome.storage.local`; UI settings stay in `chrome.storage.sync`.
 - JavaScript: 4‑space indent, single quotes, semicolons — enforced by Prettier.
 - Naming: camelCase for vars/functions; PascalCase only for classes/components.
@@ -52,6 +56,7 @@
 - New behavior requires a new test; every bugfix requires a regression test.
 - `npm test` must pass on a clean checkout. Pre-commit (husky) runs staged lint/format plus the full suite; CI runs lint, format check and tests on every push/PR.
 - Manual tests still required for UI behavior: popup flows, content script across navigation/dynamic loads, no inline scripts / no `eval` (also asserted in `tests/manifest.test.js`).
+- Main-world changes (`page-sound-guard.js`) only inject at `document_start`: reload the WhatsApp tab after installing or reloading the extension.
 - Regressions: previously blurred elements must re‑apply after page changes.
 
 ## Commit & PR Guidelines
