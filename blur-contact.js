@@ -1,5 +1,5 @@
 /* exported blurContact */
-/* global NAVIGATION_EXCLUSIONS, addBlurStyles, findConversationHeader, isInTargetChat, isNavigationChrome */
+/* global NAVIGATION_EXCLUSIONS, addBlurStyles, findConversationHeader, isInTargetChat, isNavigationChrome, normalizeContactName */
 // Per-contact blur application across chat list, header and messages.
 
 // Hide mode: the row wrapper (timestamp, unread badge) is not a blur target,
@@ -34,6 +34,7 @@ function blurContact(contactName, blurSettings, blurTypeSettings = { type: 'stan
     console.log('✅ blurContact called with valid parameters:', { contactName, blurSettings, blurTypeSettings });
 
     console.log(`🎯 Starting blur operation for "${contactName}" with blur type: ${blurTypeSettings.type}`);
+    const targetName = normalizeContactName(contactName);
     const blurStartTime = performance.now();
 
     // Add styles with the specified blur type
@@ -96,7 +97,7 @@ function blurContact(contactName, blurSettings, blurTypeSettings = { type: 'stan
         chatSpans.forEach((span, index) => {
             // The open conversation has its own pass (header/messages); this one is list-only.
             if (
-                span.getAttribute('title') === contactName &&
+                normalizeContactName(span.getAttribute('title')) === targetName &&
                 !shouldExcludeElement(span) &&
                 !(conversationHeader && conversationHeader.contains(span))
             ) {
@@ -186,7 +187,7 @@ function blurContact(contactName, blurSettings, blurTypeSettings = { type: 'stan
                 allElements.forEach((el) => {
                     if (
                         el.textContent &&
-                        el.textContent.trim() === contactName &&
+                        normalizeContactName(el.textContent) === targetName &&
                         !el.classList.contains('wa-blur-target') &&
                         !shouldExcludeElement(el)
                     ) {

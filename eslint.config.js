@@ -33,7 +33,8 @@ export default [
             'blur-contact.js',
             'user-scanner.js',
             'user-bulk-actions.js',
-            'wpp-export.js'
+            'wpp-export.js',
+            'notify-mute.js'
         ],
         languageOptions: {
             globals: {

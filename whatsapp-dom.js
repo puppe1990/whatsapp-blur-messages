@@ -1,4 +1,4 @@
-/* exported NAVIGATION_EXCLUSIONS, findConversationHeader, getOpenChatName, isInTargetChat, isNavigationChrome */
+/* exported NAVIGATION_EXCLUSIONS, findConversationHeader, getOpenChatName, isInTargetChat, isNavigationChrome, normalizeContactName */
 // WhatsApp DOM helpers: chat-context detection and navigation-element exclusions.
 
 // Navigation chrome of WhatsApp that must never be treated as a contact or blurred.
@@ -45,19 +45,23 @@ function getOpenChatName() {
     return name || null;
 }
 
+// WhatsApp wraps chat titles in bidi marks (U+202A…U+202C) and zero-width
+// characters; comparisons must ignore them, plus case and accents.
+function normalizeContactName(value) {
+    return (value || '')
+        .replace(/[\u200B-\u200D\u202A-\u202E\u2066-\u2069\uFEFF]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .normalize('NFD')
+        .replace(/\p{Diacritic}+/gu, '')
+        .toLowerCase();
+}
+
 // Check if we're currently in the target chat
 function isInTargetChat(contactName) {
     if (!contactName) return false;
 
-    const normalize = (s) =>
-        (s || '')
-            .normalize('NFD')
-            .replace(/\p{Diacritic}+/gu, '')
-            .replace(/[\u200B-\u200D\uFEFF]/g, '') // zero-width chars
-            .replace(/\s+/g, ' ')
-            .trim()
-            .toLowerCase();
-    const target = normalize(contactName);
+    const target = normalizeContactName(contactName);
 
     // Candidate 1: Header area (primary source of truth)
     const header = document.querySelector('[data-testid="conversation-header"], header');
@@ -66,12 +70,12 @@ function isInTargetChat(contactName) {
         const headerTitleSpans = header.querySelectorAll('span[title], div[title]');
         for (let span of headerTitleSpans) {
             const t = span.getAttribute('title');
-            if (t && normalize(t) === target) return true;
+            if (t && normalizeContactName(t) === target) return true;
         }
         // Fallback to exact visible text in header (normalized)
         const headerTextEls = header.querySelectorAll('h1, h2, span, div');
         for (let el of headerTextEls) {
-            const text = normalize(el.textContent);
+            const text = normalizeContactName(el.textContent);
             if (text && text === target) return true;
         }
     }
@@ -87,9 +91,9 @@ function isInTargetChat(contactName) {
         const selected = document.querySelector(sel);
         if (selected) {
             const titleEl = selected.querySelector('span[title]');
-            if (titleEl && normalize(titleEl.getAttribute('title')) === target) return true;
+            if (titleEl && normalizeContactName(titleEl.getAttribute('title')) === target) return true;
             const textEl = selected.querySelector('h1, h2, span, div');
-            if (textEl && normalize(textEl.textContent) === target) return true;
+            if (textEl && normalizeContactName(textEl.textContent) === target) return true;
         }
     }
 

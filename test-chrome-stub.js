@@ -19,6 +19,7 @@ globalThis.chrome = Object.assign(globalThis.chrome || {}, {
         onMessage: { addListener: () => {} }
     },
     storage: {
+        onChanged: { addListener: () => {} },
         sync: createStorageArea(),
         local: createStorageArea()
     }

@@ -93,6 +93,7 @@ export function createChromeMock(initialSyncStorage = {}, initialLocalStorage = 
                 lastError: null
             },
             storage: {
+                onChanged: createEvent('storageChanged', listeners),
                 sync: createStorageArea(storage),
                 local: createStorageArea(local)
             },

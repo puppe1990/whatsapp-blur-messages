@@ -1,5 +1,5 @@
 /* exported clearAllBlurClasses, setupBlurObserver, applyBlur, toggleBlur, clearBlur */
-/* global addBlurStyles, blurContact, findConversationHeader, getOpenChatName */
+/* global addBlurStyles, blurContact, findConversationHeader, getOpenChatName, normalizeContactName */
 // Blur lifecycle: apply/toggle/clear, mutation observer and re-apply monitoring.
 
 // Clear all blur classes
@@ -147,13 +147,13 @@ function reconcileChatMarks() {
             const titleSpan = row ? row.querySelector('span[title]') : null;
             const currentName = titleSpan ? (titleSpan.getAttribute('title') || '').trim() : '';
 
-            if (currentName && currentName !== owner) {
+            if (currentName && normalizeContactName(currentName) !== normalizeContactName(owner)) {
                 releaseMark(element);
             }
             return;
         }
 
-        if (!openChat || owner === openChat) return;
+        if (!openChat || normalizeContactName(owner) === normalizeContactName(openChat)) return;
         releaseMark(element);
     });
 }
