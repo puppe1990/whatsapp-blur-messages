@@ -106,6 +106,19 @@ describe('scanUsers', () => {
         expect(response.users.map((user) => user.name)).toEqual(['Primeiro', 'Segundo']);
         expect(pane.scrollTop).toBe(240);
     });
+
+    it('includes long stylized contact names', async () => {
+        const stylizedName = '⊂ Λ M I L Λ S Λ M P Λ I O S O ᗷ R Λ L ⊂ Λ M I L Λ S Λ M P Λ I O S O ᗷ R Λ L';
+        document.body.innerHTML = `
+            <div id="pane-side">
+                <div tabindex="-1"><span title="${stylizedName}">${stylizedName}</span></div>
+            </div>
+        `;
+
+        const response = await sendContentMessageAsync(chromeMock, { action: 'scanUsers', delayMs: 0 });
+
+        expect(response.users).toContainEqual({ name: stylizedName, isBlurred: false });
+    });
 });
 
 describe('blur lifecycle', () => {
@@ -279,6 +292,7 @@ describe('hide mode', () => {
 
         expect(css).toContain('display: none !important');
         expect(css).toContain('div[role="listitem"]:has(.wa-blur-target)');
+        expect(css).toContain('translate: 0 calc(-1px * var(--wa-hidden-offset))');
     });
 
     it('applies hide styles through the message API', () => {
@@ -305,6 +319,82 @@ describe('hide mode', () => {
         });
 
         expect(document.querySelector('div[role="listitem"]').classList.contains('wa-hidden-row')).toBe(true);
+    });
+
+    it('collapses the outer virtualized row so hidden contacts leave no gaps', () => {
+        document.body.innerHTML = `
+            <div id="pane-side">
+                <div role="row">
+                    <div role="listitem"><span title="Romeu Junior">Romeu Junior</span></div>
+                </div>
+                <div role="row">
+                    <div role="listitem"><span title="Ana Souza">Ana Souza</span></div>
+                </div>
+            </div>
+        `;
+
+        sendContentMessage(chromeMock, {
+            action: 'applyBlur',
+            contactName: 'Romeu Junior',
+            blurSettings: ALL_BLUR_SETTINGS,
+            blurTypeSettings: { type: 'hide' }
+        });
+
+        const rows = document.querySelectorAll('[role="row"]');
+        expect(rows[0].classList.contains('wa-hidden-row')).toBe(true);
+        expect(rows[1].classList.contains('wa-hidden-row')).toBe(false);
+        expect(rows[0].querySelector('[role="listitem"]').classList.contains('wa-hidden-row')).toBe(false);
+    });
+
+    it('collapses an unlabelled layout wrapper without hiding the whole list', () => {
+        document.body.innerHTML = `
+            <div id="pane-side">
+                <div class="virtual-list">
+                    <div class="layout-row"><div><div role="listitem"><span title="Romeu Junior">Romeu Junior</span></div></div></div>
+                    <div class="layout-row"><div><div role="listitem"><span title="Ana Souza">Ana Souza</span></div></div></div>
+                </div>
+            </div>
+        `;
+
+        sendContentMessage(chromeMock, {
+            action: 'applyBlur',
+            contactName: 'Romeu Junior',
+            blurSettings: ALL_BLUR_SETTINGS,
+            blurTypeSettings: { type: 'hide' }
+        });
+
+        expect(document.querySelectorAll('.layout-row')[0].classList.contains('wa-hidden-row')).toBe(true);
+        expect(document.querySelectorAll('.layout-row')[1].classList.contains('wa-hidden-row')).toBe(false);
+        expect(document.querySelector('.virtual-list').classList.contains('wa-hidden-row')).toBe(false);
+    });
+
+    it('hides and compacts the translated virtual row used by current WhatsApp', () => {
+        document.body.innerHTML = `
+            <div id="pane-side"><div class="virtual-list" style="height: 1000px">
+                <div class="virtual-row" style="height: 76px; transform: translateY(0px)">
+                    <div tabindex="-1"><span title="Ana Souza">Ana Souza</span></div>
+                </div>
+                <div class="virtual-row" style="height: 76px; transform: translateY(76px)">
+                    <div tabindex="-1"><span title="Romeu Junior">Romeu Junior</span></div>
+                </div>
+                <div class="virtual-row" style="height: 76px; transform: translateY(152px)">
+                    <div tabindex="-1"><span title="Novo Contato">Novo Contato</span></div>
+                </div>
+            </div></div>
+        `;
+
+        sendContentMessage(chromeMock, {
+            action: 'applyBlur',
+            contactName: 'Romeu Junior',
+            blurSettings: ALL_BLUR_SETTINGS,
+            blurTypeSettings: { type: 'hide' }
+        });
+
+        const rows = document.querySelectorAll('.virtual-row');
+        expect(rows[1].classList.contains('wa-hidden-row')).toBe(true);
+        expect(rows[1].querySelector('[tabindex]').classList.contains('wa-hidden-row')).toBe(false);
+        expect(rows[2].classList.contains('wa-compacted-row')).toBe(true);
+        expect(rows[2].style.getPropertyValue('--wa-hidden-offset')).toBe('76');
     });
 
     it('restores the chat row when the user blur is removed', () => {
@@ -346,6 +436,18 @@ describe('chat mark reconciliation', () => {
         document.body.innerHTML = `
             <div role="listitem" class="wa-hidden-row" data-wa-blur-user="Romeu Junior">
                 <span title="Ana Souza">Ana Souza</span>
+            </div>
+        `;
+
+        evaluateInPage('reconcileChatMarks()');
+
+        expect(document.querySelector('.wa-hidden-row')).toBeNull();
+    });
+
+    it('un-hides recycled virtualized row wrappers', () => {
+        document.body.innerHTML = `
+            <div class="layout-row wa-hidden-row" data-wa-blur-user="Romeu Junior">
+                <div role="listitem"><span title="Ana Souza">Ana Souza</span></div>
             </div>
         `;
 

@@ -1,5 +1,5 @@
 /* exported clearAllBlurClasses, setupBlurObserver, applyBlur, toggleBlur, clearBlur */
-/* global addBlurStyles, blurContact, findConversationHeader, getOpenChatName, normalizeContactName */
+/* global addBlurStyles, blurContact, clearVirtualRowCompaction, compactVirtualChatRows, findConversationHeader, getOpenChatName, normalizeContactName */
 // Blur lifecycle: apply/toggle/clear, mutation observer and re-apply monitoring.
 
 // Clear all blur classes
@@ -7,6 +7,7 @@ function clearAllBlurClasses() {
     document.querySelectorAll('.wa-blur-target, .wa-blur-image, .wa-hidden-row').forEach((el) => {
         el.classList.remove('wa-blur-target', 'wa-blur-image', 'wa-hidden-row');
     });
+    clearVirtualRowCompaction();
 }
 
 // Setup mutation observer
@@ -143,7 +144,9 @@ function reconcileChatMarks() {
             Boolean(conversationHeader && conversationHeader.contains(element));
 
         if (!inConversation) {
-            const row = element.closest('div[role="listitem"], div[tabindex]');
+            const row = element.classList.contains('wa-hidden-row')
+                ? element
+                : element.closest('div[role="listitem"], div[tabindex]');
             const titleSpan = row ? row.querySelector('span[title]') : null;
             const currentName = titleSpan ? (titleSpan.getAttribute('title') || '').trim() : '';
 
@@ -156,6 +159,7 @@ function reconcileChatMarks() {
         if (!openChat || normalizeContactName(owner) === normalizeContactName(openChat)) return;
         releaseMark(element);
     });
+    compactVirtualChatRows();
 }
 
 // Continuous monitoring to ensure blur stays applied
