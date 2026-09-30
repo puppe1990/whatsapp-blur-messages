@@ -1,5 +1,5 @@
 // WhatsApp Blur Content Script
-/* global applyBlur, blurAllUsers, blurContact, clearAllUsers, clearBlur, removeUserBlur, scanForUsers, setupBlurObserver, toggleBlur, toggleUserBlur, unblurAllUsers */
+/* global applyBlur, blurAllUsers, blurContact, clearAllUsers, clearBlur, removeUserBlur, scanForUsersAcrossList, setupBlurObserver, toggleBlur, toggleUserBlur, unblurAllUsers */
 
 // Message router and startup bootstrap. Loaded last: the other content scripts
 // (state, styles, DOM helpers, controller, scanner) are declared before this one in manifest.json.
@@ -30,8 +30,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             break;
 
         case 'scanUsers': {
-            const users = scanForUsers();
-            sendResponse({ success: true, users: users });
+            scanForUsersAcrossList(request.maxPasses, request.delayMs)
+                .then((users) => sendResponse({ success: true, users }))
+                .catch((error) => sendResponse({ success: false, error: error.message }));
             break;
         }
 

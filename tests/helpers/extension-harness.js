@@ -150,3 +150,9 @@ export function sendContentMessage(chromeMock, request) {
     });
     return response;
 }
+
+export function sendContentMessageAsync(chromeMock, request) {
+    return new Promise((resolve) => {
+        chromeMock.listeners.message(request, { tab: { id: 1 } }, resolve);
+    });
+}

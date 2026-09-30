@@ -1,4 +1,4 @@
-/* exported scanForUsers, toggleUserBlur, removeUserBlur */
+/* exported scanForUsers, scanForUsersAcrossList, toggleUserBlur, removeUserBlur */
 /* global NAVIGATION_EXCLUSIONS, blurContact, findConversationHeader, isInTargetChat, isNavigationChrome, normalizeContactName, setupBlurObserver */
 // Scan visible users and toggle/remove blur for a single user.
 
@@ -95,6 +95,55 @@ function scanForUsers() {
 
     console.log('Scanned users:', users);
     return users;
+}
+
+const DEFAULT_SCAN_PASSES = 12;
+const SCAN_RENDER_DELAY_MS = 120;
+
+function findChatListScroller() {
+    const pane = document.querySelector('#pane-side');
+    if (!pane) {
+        return null;
+    }
+
+    const candidates = [pane, ...pane.querySelectorAll('div')];
+    return candidates.find((element) => element.scrollHeight > element.clientHeight) || null;
+}
+
+function mergeScanResults(usersByName) {
+    for (const user of scanForUsers()) {
+        const key = normalizeContactName(user.name);
+        if (!usersByName.has(key)) {
+            usersByName.set(key, user);
+        }
+    }
+}
+
+function waitForScanRender(delayMs) {
+    return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+async function scanForUsersAcrossList(maxPasses = DEFAULT_SCAN_PASSES, delayMs = SCAN_RENDER_DELAY_MS) {
+    const usersByName = new Map();
+    const scroller = findChatListScroller();
+    if (!scroller) {
+        mergeScanResults(usersByName);
+        return [...usersByName.values()];
+    }
+
+    const originalScrollTop = scroller.scrollTop;
+    scroller.scrollTop = 0;
+    for (let pass = 0; pass < maxPasses; pass += 1) {
+        await waitForScanRender(delayMs);
+        mergeScanResults(usersByName);
+        const previousScrollTop = scroller.scrollTop;
+        scroller.scrollTop += Math.max(scroller.clientHeight * 0.8, 1);
+        if (scroller.scrollTop === previousScrollTop) {
+            break;
+        }
+    }
+    scroller.scrollTop = originalScrollTop;
+    return [...usersByName.values()];
 }
 
 // Toggle blur for a specific user
