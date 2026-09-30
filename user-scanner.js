@@ -1,6 +1,8 @@
 /* exported scanForUsers, scanForUsersAcrossList, toggleUserBlur, removeUserBlur */
-/* global NAVIGATION_EXCLUSIONS, blurContact, findConversationHeader, isInTargetChat, isNavigationChrome, normalizeContactName, setupBlurObserver */
+/* global NAVIGATION_EXCLUSIONS, blurContact, compactVirtualChatRows, findConversationHeader, isInTargetChat, isNavigationChrome, normalizeContactName, setupBlurObserver */
 // Scan visible users and toggle/remove blur for a single user.
+
+const MAX_CONTACT_NAME_LENGTH = 160;
 
 // Scan for users currently visible on the page
 function scanForUsers() {
@@ -58,7 +60,7 @@ function scanForUsers() {
             if (parent) {
                 // Check if this span is likely a name (not a message)
                 const textContent = span.textContent.trim();
-                if (textContent === title && textContent.length > 0 && textContent.length < 50) {
+                if (textContent === title && textContent.length <= MAX_CONTACT_NAME_LENGTH) {
                     users.push({
                         name: title.trim(),
                         isBlurred: false
@@ -75,7 +77,7 @@ function scanForUsers() {
         const headerElements = header.querySelectorAll('*');
         headerElements.forEach((el) => {
             const text = el.textContent && el.textContent.trim();
-            if (text && text.length > 0 && text.length < 50 && !seenNames.has(text) && !shouldExcludeFromScan(el)) {
+            if (text && text.length <= MAX_CONTACT_NAME_LENGTH && !seenNames.has(text) && !shouldExcludeFromScan(el)) {
                 // Exclude navigation elements by their text content
                 if (isNavigationChrome(text)) {
                     return; // Skip this element
@@ -402,5 +404,6 @@ function removeUserBlur(userName) {
         }
     }
 
+    compactVirtualChatRows();
     console.log('Removed blur for user:', userName);
 }

@@ -1,17 +1,75 @@
-/* exported blurContact */
+/* exported blurContact, clearVirtualRowCompaction, compactVirtualChatRows */
 /* global NAVIGATION_EXCLUSIONS, addBlurStyles, findConversationHeader, isInTargetChat, isNavigationChrome, normalizeContactName */
 // Per-contact blur application across chat list, header and messages.
 
 // Hide mode: the row wrapper (timestamp, unread badge) is not a blur target,
 // so tag it explicitly and let the hide CSS collapse the whole row.
+function findChatLayoutRow(nameSpan) {
+    const contentRow = nameSpan.closest('div[role="listitem"]') || nameSpan.closest('div[tabindex]');
+    const pane = document.querySelector('#pane-side');
+    if (!contentRow || !pane) return contentRow;
+
+    for (
+        let candidate = contentRow.parentElement;
+        candidate && candidate !== pane;
+        candidate = candidate.parentElement
+    ) {
+        if (/translateY\(/.test(candidate.style.transform) && candidate.style.height) return candidate;
+    }
+
+    let layoutRow = contentRow;
+    for (
+        let candidate = contentRow.parentElement;
+        candidate && candidate !== pane;
+        candidate = candidate.parentElement
+    ) {
+        if (candidate.querySelectorAll('div[role="listitem"]').length !== 1) break;
+        layoutRow = candidate;
+    }
+    return layoutRow;
+}
+
+function clearVirtualRowCompaction() {
+    document.querySelectorAll('.wa-compacted-row').forEach((row) => {
+        row.classList.remove('wa-compacted-row');
+        row.style.removeProperty('--wa-hidden-offset');
+    });
+}
+
+function compactVirtualRowSiblings(parent) {
+    let hiddenOffset = 0;
+    for (const row of parent.children) {
+        if (!/translateY\(/.test(row.style.transform) || !row.style.height) continue;
+        row.classList.remove('wa-compacted-row');
+        row.style.removeProperty('--wa-hidden-offset');
+        if (row.classList.contains('wa-hidden-row')) {
+            hiddenOffset += Number.parseFloat(row.style.height) || 0;
+            continue;
+        }
+        if (!hiddenOffset) continue;
+        row.classList.add('wa-compacted-row');
+        row.style.setProperty('--wa-hidden-offset', String(hiddenOffset));
+    }
+}
+
+function compactVirtualChatRows() {
+    const parents = new Set();
+    document.querySelectorAll('.wa-hidden-row, .wa-compacted-row').forEach((row) => {
+        if (row.parentElement) parents.add(row.parentElement);
+    });
+    clearVirtualRowCompaction();
+    parents.forEach(compactVirtualRowSiblings);
+}
+
 function hideChatRow(nameSpan, contactName) {
-    const row = nameSpan.closest('div[role="listitem"]') || nameSpan.closest('div[tabindex]');
+    const row = findChatLayoutRow(nameSpan);
     if (!row || row.classList.contains('wa-hidden-row')) return;
 
     row.classList.add('wa-hidden-row');
     try {
         row.dataset.waBlurUser = contactName;
     } catch (e) {}
+    compactVirtualChatRows();
 }
 
 // Enhanced blur function that works with multiple users

@@ -318,6 +318,9 @@ function generateHideBlurCSS() {
         .wa-hidden-row {
             display: none !important;
         }
+        .wa-compacted-row {
+            translate: 0 calc(-1px * var(--wa-hidden-offset)) !important;
+        }
         /* Collapse the whole chat row that contains hidden content */
         div[role="listitem"]:has(.wa-blur-target),
         div[role="listitem"]:has(.wa-blur-image) {
