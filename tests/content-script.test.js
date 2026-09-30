@@ -4,6 +4,7 @@ import {
     evaluateInPage,
     loadContentScripts,
     sendContentMessage,
+    sendContentMessageAsync,
     setupBrowserEnvironment
 } from './helpers/extension-harness.js';
 
@@ -74,13 +75,36 @@ describe('message routing', () => {
 });
 
 describe('scanUsers', () => {
-    it('finds contacts in the chat list and header, skipping previews and navigation entries', () => {
+    it('finds contacts in the chat list and header, skipping previews and navigation entries', async () => {
         document.body.innerHTML = CHAT_FIXTURE;
 
-        const response = sendContentMessage(chromeMock, { action: 'scanUsers' });
+        const response = await sendContentMessageAsync(chromeMock, { action: 'scanUsers', delayMs: 0 });
 
         expect(response.success).toBe(true);
         expect(response.users.map((user) => user.name)).toEqual(['Romeu Junior', 'Ana Souza']);
+    });
+
+    it('scans multiple virtualized chat-list pages and restores the scroll position', async () => {
+        document.body.innerHTML = '<div id="pane-side"></div>';
+        const pane = document.getElementById('pane-side');
+        Object.defineProperties(pane, {
+            clientHeight: { value: 100 },
+            scrollHeight: { value: 1000 }
+        });
+        let scrollTop = 240;
+        Object.defineProperty(pane, 'scrollTop', {
+            get: () => scrollTop,
+            set: (value) => {
+                scrollTop = Math.min(value, 900);
+                const name = value >= 80 ? 'Segundo' : 'Primeiro';
+                pane.innerHTML = `<div role="listitem"><span title="${name}">${name}</span></div>`;
+            }
+        });
+
+        const response = await sendContentMessageAsync(chromeMock, { action: 'scanUsers', delayMs: 0 });
+
+        expect(response.users.map((user) => user.name)).toEqual(['Primeiro', 'Segundo']);
+        expect(pane.scrollTop).toBe(240);
     });
 });
 
@@ -227,10 +251,10 @@ describe('bulk blur honors the selected blur type', () => {
 });
 
 describe('scanning against current WhatsApp chrome', () => {
-    it('ignores icon ligatures, rail buttons and chat filters', () => {
+    it('ignores icon ligatures, rail buttons and chat filters', async () => {
         document.body.innerHTML = WHATSAPP_CHROME_FIXTURE;
 
-        const response = sendContentMessage(chromeMock, { action: 'scanUsers' });
+        const response = await sendContentMessageAsync(chromeMock, { action: 'scanUsers', delayMs: 0 });
 
         expect(response.users.map((user) => user.name)).toEqual(['Romeu Junior']);
     });
