@@ -7,7 +7,10 @@
 function findChatLayoutRow(nameSpan) {
     const contentRow = nameSpan.closest('div[role="listitem"]') || nameSpan.closest('div[tabindex]');
     const pane = document.querySelector('#pane-side');
-    if (!contentRow || !pane) return contentRow;
+    // Search suggestions can share the app's tabindex ancestor. Never walk
+    // outside the chat pane: doing so can mark <html> as a hidden chat row.
+    if (!pane || !pane.contains(nameSpan)) return nameSpan.closest('div[role="listitem"]');
+    if (!contentRow || contentRow === pane || !pane.contains(contentRow)) return null;
 
     for (
         let candidate = contentRow.parentElement;
