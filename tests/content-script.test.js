@@ -308,6 +308,31 @@ describe('hide mode', () => {
         expect(document.getElementById('wa-blur-style')?.textContent).toContain('display: none !important');
     });
 
+    it('keeps the app visible when a hidden contact appears in recent searches', () => {
+        document.body.innerHTML = `
+            <div id="app" tabindex="-1">
+                <section aria-label="Pesquisas recentes"><span title="Romeu Junior">Romeu Junior</span></section>
+                <div id="pane-side"><div role="listitem"><span title="Ana Souza">Ana Souza</span></div></div>
+                <main>Conversa aberta</main>
+            </div>
+        `;
+
+        sendContentMessage(chromeMock, {
+            action: 'applyBlur',
+            contactName: 'Romeu Junior',
+            blurSettings: ALL_BLUR_SETTINGS,
+            blurTypeSettings: { type: 'hide' }
+        });
+
+        evaluateInPage("hideChatRow(document.querySelector('[title=\"Romeu Junior\"]'), 'Romeu Junior')");
+
+        expect(document.documentElement.classList.contains('wa-hidden-row')).toBe(false);
+        expect(document.body.classList.contains('wa-hidden-row')).toBe(false);
+        expect(document.querySelector('#app.wa-hidden-row')).toBeNull();
+        expect(window.getComputedStyle(document.getElementById('app')).display).not.toBe('none');
+        expect(document.querySelector('[title="Romeu Junior"]').classList.contains('wa-blur-target')).toBe(true);
+    });
+
     it('collapses the chat row so timestamps and badges disappear', () => {
         document.body.innerHTML = CHAT_FIXTURE;
 
